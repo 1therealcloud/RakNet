@@ -76,7 +76,6 @@ int SplitPacketIndexComp( SplitPacketIndexType const &key, InternalPacket* const
 //-------------------------------------------------------------------------------------------------------
 ReliabilityLayer::ReliabilityLayer() : updateBitStream( DEFAULT_MTU_SIZE )   // preallocate the update bitstream so we can avoid a lot of reallocs at runtime
 {
-	freeThreadedMemoryOnNextUpdate = false;
 #ifdef _DEBUG
 	// Wait longer to disconnect in debug so I don't get disconnected while tracing
 	timeoutTime=30000;
@@ -96,7 +95,7 @@ ReliabilityLayer::ReliabilityLayer() : updateBitStream( DEFAULT_MTU_SIZE )   // 
 //-------------------------------------------------------------------------------------------------------
 ReliabilityLayer::~ReliabilityLayer()
 {
-	FreeMemory( true ); // Free all memory immediately
+	FreeMemory();
 }
 
 //-------------------------------------------------------------------------------------------------------
@@ -104,7 +103,7 @@ ReliabilityLayer::~ReliabilityLayer()
 //-------------------------------------------------------------------------------------------------------
 void ReliabilityLayer::Reset( bool resetVariables )
 {
-	FreeMemory( true ); // true because making a memory reset pending in the update cycle causes resets after reconnects.  Instead, just call Reset from a single thread
+	FreeMemory();
 	if (resetVariables)
 		InitializeVariables();
 }
@@ -119,13 +118,6 @@ void ReliabilityLayer::SetEncryptionKey( const unsigned char* key )
 	else
 		encryptor.UnsetKey();
 }
-
-//-------------------------------------------------------------------------------------------------------
-// Assign a socket for the reliability layer to use for writing
-//-------------------------------------------------------------------------------------------------------
-#ifdef _MSC_VER
-#pragma warning( disable : 4100 ) // warning C4100: <variable name> : unreferenced formal parameter
-#endif
 
 //-------------------------------------------------------------------------------------------------------
 // Set the time, in MS, to use before considering ourselves disconnected after not being able to deliver a reliable packet
@@ -193,25 +185,7 @@ void ReliabilityLayer::InitializeVariables( void )
 //-------------------------------------------------------------------------------------------------------
 // Frees all allocated memory
 //-------------------------------------------------------------------------------------------------------
-void ReliabilityLayer::FreeMemory( bool freeAllImmediately )
-{
-	if ( freeAllImmediately )
-	{
-		FreeThreadedMemory();
-		FreeThreadSafeMemory();
-	}
-	else
-	{
-		FreeThreadSafeMemory();
-		freeThreadedMemoryOnNextUpdate = true;
-	}
-}
-
-void ReliabilityLayer::FreeThreadedMemory( void )
-{
-}
-
-void ReliabilityLayer::FreeThreadSafeMemory( void )
+void ReliabilityLayer::FreeMemory( void )
 {
 	unsigned i,j;
 	InternalPacket *internalPacket;
@@ -329,7 +303,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 
 	// bytesReceived+=length + UDP_HEADER_SIZE;
 
-	UpdateThreadedMemory();
 
 	// decode this whole chunk if the decoder is defined.
 	if ( encryptor.IsKeySet() )
@@ -757,10 +730,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 //-------------------------------------------------------------------------------------------------------
 int ReliabilityLayer::Receive( unsigned char **data )
 {
-	// Wait until the clear occurs
-	if (freeThreadedMemoryOnNextUpdate)
-		return 0;
-
 	InternalPacket * internalPacket;
 
 	if ( outputQueue.Size() > 0 )
@@ -937,7 +906,6 @@ void ReliabilityLayer::Update( SOCKET s, PlayerID playerId, int MTUSize, RakNetT
 
 	// unsigned resendListSize;
 	bool reliableDataSent;
-	UpdateThreadedMemory();
 
 	// Due to thread vagarities and the way I store the time to avoid slow calls to RakNet::GetTime
 	// time may be less than lastAck
@@ -2416,18 +2384,6 @@ unsigned int ReliabilityLayer::GetResendListDataSize(void) const
 
 	// Not accurate but thread-safe.  The commented version might crash if the queue is cleared while we loop through it
 	return resendList.Size();
-}
-
-//-------------------------------------------------------------------------------------------------------
-// Process threaded commands
-//-------------------------------------------------------------------------------------------------------
-void ReliabilityLayer::UpdateThreadedMemory(void)
-{
-	if ( freeThreadedMemoryOnNextUpdate )
-	{
-		freeThreadedMemoryOnNextUpdate = false;
-		FreeThreadedMemory();
-	}
 }
 
 #ifdef _MSC_VER

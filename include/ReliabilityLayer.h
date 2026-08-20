@@ -231,13 +231,7 @@ private:
 	void InsertPacketIntoResendList( InternalPacket *internalPacket, RakNetTimeNS time, bool makeCopyOfInternalPacket, bool firstResend );
 
 	/// Memory handling
-	void FreeMemory( bool freeAllImmediately );
-
-	/// Memory handling
-	void FreeThreadedMemory( void );
-
-	/// Memory handling
-	void FreeThreadSafeMemory( void );
+	void FreeMemory( void );
 
 	// Initialize the variables
 	void InitializeVariables( void );
@@ -256,9 +250,6 @@ private:
 
 	/// How many elements are waiting to be resent?
 	unsigned int GetResendListDataSize(void) const;
-
-	/// Update all memory which is not threadsafe
-	void UpdateThreadedMemory(void);
 
 	void CalculateHistogramAckSize(void);
 
@@ -326,9 +317,6 @@ private:
 #endif
 	unsigned sendPacketCount, receivePacketCount;
 	RakNetTimeNS ackTimeIncrement;
-
-	///This variable is so that free memory can be called by only the update thread so we don't have to mutex things so much
-	bool freeThreadedMemoryOnNextUpdate;
 
 #ifndef _RELEASE
 	struct DataAndTime
