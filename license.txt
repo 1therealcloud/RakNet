@@ -1,4 +1,16 @@
+RakNet 2.52
+
 Copyright 2002-2005 Kevin Jenkins (rakkar@rakkarsoft.com).
-This API and the code herein created by and wholly and privately owned by Kevin Jenkins except where specifically indicated otherwise.
-Licensed under the "RakNet" brand by Jenkins Software and subject to the terms of the relevant licensing agreement available at http://www.rakkarsoft.com
+
+The original RakNet source was distributed under multiple licensing
+options. The RakNet source files contained in this repository include
+terms permitting use under the GNU General Public License, version 2
+or, at the user's option, any later version.
+
+This repository is distributed under that GPL licensing option,
+except for files or portions explicitly identified as being under
+different terms.
+
+Original copyright and licensing notices in the source files have
+been retained.
 
