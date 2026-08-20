@@ -33,9 +33,6 @@
 #include "DS_HuffmanEncodingTree.h"
 #include "Rand.h"
 #include "PluginInterface.h"
-#include "StringCompressor.h"
-#include "StringTable.h"
-#include "NetworkIDGenerator.h"
 #include "NetworkTypes.h"
 #include "SHA1.h"
 #include "RakSleep.h"
@@ -153,9 +150,6 @@ Packet *AllocPacket(unsigned dataSize, unsigned char *data)
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 RakPeer::RakPeer()
 {
-	StringCompressor::AddReference();
-	StringTable::AddReference();
-
 #if !defined(_COMPATIBILITY_1)
 	usingSecurity = false;
 #endif
@@ -206,10 +200,6 @@ RakPeer::~RakPeer()
 	ClearBanList();
 
 	Disconnect( 0, 0);
-
-
-	StringCompressor::RemoveReference();
-	StringTable::RemoveReference();
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

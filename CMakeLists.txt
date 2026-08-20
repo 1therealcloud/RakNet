@@ -26,8 +26,6 @@ add_library(
     source/SHA1.cpp
     source/SimpleMutex.cpp
     source/SocketLayer.cpp
-    source/StringCompressor.cpp
-    source/StringTable.cpp
     source/TEABlockEncryptor.cpp
 )
 
