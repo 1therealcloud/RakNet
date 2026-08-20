@@ -38,10 +38,6 @@ typedef int socklen_t;
 #include <fcntl.h>
 #endif
 
-#ifdef __USE_IO_COMPLETION_PORTS
-#include "AsynchronousFileIO.h"
-#endif
-
 
 #ifdef _MSC_VER
 #pragma warning( push )
@@ -212,13 +208,6 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	sockaddr_in listenerSocketAddress;
 	int ret;
 
-#ifdef __USE_IO_COMPLETION_PORTS
-
-	if ( blockingSocket == false ) 
-		listenSocket = WSASocket( AF_INET, SOCK_DGRAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED );
-	else
-#endif
-
 		listenSocket = socket( AF_INET, SOCK_DGRAM, 0 );
 
 	if ( listenSocket == INVALID_SOCKET )
@@ -385,19 +374,8 @@ void SocketLayer::Write( const SOCKET writeSocket, const char* data, const int l
 #ifdef _DEBUG
 	assert( writeSocket != INVALID_SOCKET );
 #endif
-#ifdef __USE_IO_COMPLETION_PORTS
-
-	ExtendedOverlappedStruct* eos = ExtendedOverlappedPool::Instance()->GetPointer();
-	memset( &( eos->overlapped ), 0, sizeof( OVERLAPPED ) );
-	memcpy( eos->data, data, length );
-	eos->length = length;
-
-	//AsynchronousFileIO::Instance()->PostWriteCompletion(ccs);
-	WriteAsynch( ( HANDLE ) writeSocket, eos );
-#else
 
 	send( writeSocket, data, length, 0 );
-#endif
 }
 
 // Start an asynchronous read using the specified socket.
@@ -406,35 +384,6 @@ void SocketLayer::Write( const SOCKET writeSocket, const char* data, const int l
 #endif
 bool SocketLayer::AssociateSocketWithCompletionPortAndRead( SOCKET readSocket, unsigned int binaryAddress, unsigned short port, RakPeer *rakPeer )
 {
-#ifdef __USE_IO_COMPLETION_PORTS
-	assert( readSocket != INVALID_SOCKET );
-
-	ClientContextStruct* ccs = new ClientContextStruct;
-	ccs->handle = ( HANDLE ) readSocket;
-
-	ExtendedOverlappedStruct* eos = ExtendedOverlappedPool::Instance()->GetPointer();
-	memset( &( eos->overlapped ), 0, sizeof( OVERLAPPED ) );
-	eos->binaryAddress = binaryAddress;
-	eos->port = port;
-	eos->rakPeer = rakPeer;
-	eos->length = MAXIMUM_MTU_SIZE;
-
-	bool b = AsynchronousFileIO::Instance()->AssociateSocketWithCompletionPort( readSocket, ( DWORD ) ccs );
-
-	if ( !b )
-	{
-		ExtendedOverlappedPool::Instance()->ReleasePointer( eos );
-		delete ccs;
-		return false;
-	}
-
-	BOOL success = ReadAsynch( ( HANDLE ) readSocket, eos );
-
-	if ( success == FALSE )
-		return false;
-
-#endif
-
 	return true;
 }
 

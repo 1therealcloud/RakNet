@@ -38,7 +38,6 @@ typedef int SOCKET;
 #define INVALID_SOCKET -1 
 #define SOCKET_ERROR -1
 #endif
-#include "ClientContextStruct.h"
 
 class RakPeer;
 
@@ -80,10 +79,6 @@ public:
 
 	#if !defined(_COMPATIBILITY_1)
 	const char* DomainNameToIP( const char *domainName );
-	#endif
-	
-	#ifdef __USE_IO_COMPLETION_PORTS
-	void AssociateSocketWithCompletionPort( SOCKET socket, ClientContextStruct* completionKey );
 	#endif
 	
 	/// Start an asynchronous read using the specified socket.  The callback will use the specified PlayerID (associated with this socket) and call either the client or the server callback (one or
