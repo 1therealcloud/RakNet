@@ -25,8 +25,6 @@
 // alloca
 #if defined(_WIN32)
 #include <malloc.h>
-#elif defined(_COMPATIBILITY_2)
-#include "Compatibility2Includes.h"
 #else
 #include <stdlib.h>
 #endif

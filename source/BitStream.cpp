@@ -31,8 +31,6 @@
 /*
 #if defined ( __APPLE__ ) || defined ( __APPLE_CC__ )
 	#include <malloc/malloc.h>
-#elif !defined(_COMPATIBILITY_2)
-	#include <malloc.h>
 #endif
 
 	*/

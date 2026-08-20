@@ -29,8 +29,6 @@
 #include <process.h>
 #define COMPATIBILITY_2_RECV_FROM_FLAGS 0
 typedef int socklen_t;
-#elif defined(_COMPATIBILITY_2)
-#include "Compatibility2Includes.h"
 #else
 #define COMPATIBILITY_2_RECV_FROM_FLAGS 0
 #include <string.h> // memcpy
@@ -276,8 +274,6 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	}
 	*/
 
-#ifndef _COMPATIBILITY_2
-	//Set non-blocking
 #ifdef _WIN32
 	unsigned long nonblocking = 1;
 // http://www.die.net/doc/linux/man/man7/ip.7.html
@@ -292,7 +288,6 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 		assert( 0 );
 		return INVALID_SOCKET;
 	}
-#endif
 #endif
 
 	// Set broadcast capable
@@ -350,7 +345,6 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	return listenSocket;
 }
 
-#if !defined(_COMPATIBILITY_2)
 const char* SocketLayer::DomainNameToIP( const char *domainName )
 {
 	struct hostent * phe = gethostbyname( domainName );
@@ -367,7 +361,6 @@ const char* SocketLayer::DomainNameToIP( const char *domainName )
 
 	return inet_ntoa( addr );
 }
-#endif
 
 void SocketLayer::Write( const SOCKET writeSocket, const char* data, const int length )
 {
@@ -556,7 +549,6 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, char ip[ 16 ], 
 	return SendTo( s, data, length, binaryAddress, port );
 }
 
-#if !defined(_COMPATIBILITY_2)
 void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 {
 	char ac[ 80 ];
@@ -608,7 +600,6 @@ void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 		strcpy( ipList[ i ], inet_ntoa( addr ) );
 	}
 }
-#endif
 
 unsigned short SocketLayer::GetLocalPort ( SOCKET s )
 {

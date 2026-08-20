@@ -17,10 +17,6 @@
 #include "GetTime.h"
 #if defined(_WIN32)
 #include <windows.h>
-#elif defined(_COMPATIBILITY_2)
-#include "Compatibility2Includes.h"
-#include <sys/time.h>
-#include <unistd.h>
 #else
 #include <sys/time.h>
 #include <unistd.h>

@@ -1,7 +1,5 @@
 #if defined(_WIN32)
 #include <windows.h> // Sleep
-#elif defined(_COMPATIBILITY_2)
-#include "Compatibility2Includes.h"
 #else
 #include <unistd.h> // usleep
 #endif
