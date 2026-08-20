@@ -27,10 +27,8 @@
 
 #ifdef _WIN32
 #include <process.h>
-#define COMPATIBILITY_2_RECV_FROM_FLAGS 0
 typedef int socklen_t;
 #else
-#define COMPATIBILITY_2_RECV_FROM_FLAGS 0
 #include <string.h> // memcpy
 #include <unistd.h>
 #include <fcntl.h>
@@ -396,7 +394,7 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 		return SOCKET_ERROR;
 	}
 
-	len = recvfrom( s, data, MAXIMUM_MTU_SIZE, COMPATIBILITY_2_RECV_FROM_FLAGS, ( sockaddr* ) & sa, ( socklen_t* ) & len2 );
+	len = recvfrom( s, data, MAXIMUM_MTU_SIZE, 0, ( sockaddr* ) & sa, ( socklen_t* ) & len2 );
 
 	// if (len>0)
 	//  printf("Got packet on port %i\n",ntohs(sa.sin_port));
