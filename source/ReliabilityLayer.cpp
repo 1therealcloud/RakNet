@@ -126,17 +126,6 @@ void ReliabilityLayer::SetEncryptionKey( const unsigned char* key )
 #ifdef _MSC_VER
 #pragma warning( disable : 4100 ) // warning C4100: <variable name> : unreferenced formal parameter
 #endif
-void ReliabilityLayer::SetSocket( SOCKET s )
-{
-}
-
-//-------------------------------------------------------------------------------------------------------
-// Get the socket held by the reliability layer
-//-------------------------------------------------------------------------------------------------------
-SOCKET ReliabilityLayer::GetSocket( void )
-{
-	return INVALID_SOCKET;
-}
 
 //-------------------------------------------------------------------------------------------------------
 // Set the time, in MS, to use before considering ourselves disconnected after not being able to deliver a reliable packet
@@ -757,11 +746,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 		// reliabilityLayerMutexes[windowSize_MUTEX].Unlock();
 	}
 	*/
-
-	if (hasAcks)
-	{
-		UpdateWindowFromAck(time);
-	}
 
 	receivePacketCount++;
 
@@ -1445,46 +1429,6 @@ void ReliabilityLayer::SetSplitMessageProgressInterval(int interval)
 void ReliabilityLayer::SetUnreliableTimeout(RakNetTime timeoutMS)
 {
 	unreliableTimeout=(RakNetTimeNS)timeoutMS*(RakNetTimeNS)1000;
-}
-
-//-------------------------------------------------------------------------------------------------------
-// This will return true if we should not send at this time
-//-------------------------------------------------------------------------------------------------------
-bool ReliabilityLayer::IsSendThrottled( int MTUSize )
-{
-	return false;
-//	return resendList.Size() > windowSize;
-
-	// Disabling this, because it can get stuck here forever
-	/*
-	unsigned packetsWaiting;
-	unsigned resendListDataSize=0;
-	unsigned i;
-	for (i=0; i < resendList.Size(); i++)
-	{
-		if (resendList[i])
-			resendListDataSize+=resendList[i]->dataBitLength;
-	}
-	packetsWaiting = 1 + ((BITS_TO_BYTES(resendListDataSize)) / (MTUSize - UDP_HEADER_SIZE - 10)); // 10 to roughly estimate the raknet header
-
-	return packetsWaiting >= windowSize;
-	*/
-}
-
-//-------------------------------------------------------------------------------------------------------
-// We lost a packet
-//-------------------------------------------------------------------------------------------------------
-void ReliabilityLayer::UpdateWindowFromPacketloss( RakNetTimeNS time )
-{
-
-}
-
-//-------------------------------------------------------------------------------------------------------
-// Increase the window size
-//-------------------------------------------------------------------------------------------------------
-void ReliabilityLayer::UpdateWindowFromAck( RakNetTimeNS time )
-{
-
 }
 
 //-------------------------------------------------------------------------------------------------------

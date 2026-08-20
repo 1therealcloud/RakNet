@@ -81,11 +81,6 @@ public:
 	const char* DomainNameToIP( const char *domainName );
 	#endif
 	
-	/// Start an asynchronous read using the specified socket.  The callback will use the specified PlayerID (associated with this socket) and call either the client or the server callback (one or
-	/// the other should be 0)
-	/// \note Was used for depreciated IO completion ports.	
-	bool AssociateSocketWithCompletionPortAndRead( SOCKET readSocket, unsigned int binaryAddress, unsigned short port, RakPeer* rakPeer );
-	
 	/// Write \a data of length \a length to \a writeSocket
 	/// \param[in] writeSocket The socket to write to
 	/// \param[in] data The data to write

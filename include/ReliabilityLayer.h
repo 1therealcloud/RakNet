@@ -79,14 +79,6 @@ public:
 	/// \param[in] key Byte stream for the encryption key
 	void SetEncryptionKey( const unsigned char *key );
 
-	/// Depreciated, from IO Completion ports
-	/// \param[in] s The socket
-	void SetSocket( SOCKET s );
-
-	///	Returns what was passed to SetSocket
-	/// \return The socket
-	SOCKET GetSocket( void );
-
 	/// Set the time, in MS, to use before considering ourselves disconnected after not being able to deliver a reliable packet
 	/// Default time is 10,000 or 10 seconds in release and 30,000 or 30 seconds in debug.
 	/// \param[in] time Time, in MS
@@ -194,15 +186,6 @@ private:
 
 	/// Acknowledge receipt of the packet with the specified messageNumber
 	void SendAcknowledgementPacket( const MessageNumberType messageNumber, RakNetTimeNS time );
-
-	/// This will return true if we should not send at this time
-	bool IsSendThrottled( int MTUSize );
-
-	/// We lost a packet
-	void UpdateWindowFromPacketloss( RakNetTimeNS time );
-
-	/// Increase the window size
-	void UpdateWindowFromAck( RakNetTimeNS time );
 
 	/// Parse an internalPacket and figure out how many header bits would be written.  Returns that number
 	int GetBitStreamHeaderLength( const InternalPacket *const internalPacket );
