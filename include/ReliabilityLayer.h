@@ -51,8 +51,6 @@ class PluginInterface;
 
 #define RESEND_TREE_ORDER 32
 
-#include "BitStream.h"
-
 int SplitPacketIndexComp( SplitPacketIndexType const &key, InternalPacket* const &data );
 struct SplitPacketChannel
 {
