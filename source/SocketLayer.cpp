@@ -38,7 +38,6 @@ typedef int socklen_t;
 #include <fcntl.h>
 #endif
 
-#include "ExtendedOverlappedPool.h"
 #ifdef __USE_IO_COMPLETION_PORTS
 #include "AsynchronousFileIO.h"
 #endif
