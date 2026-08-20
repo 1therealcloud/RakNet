@@ -117,15 +117,11 @@ static unsigned short sampOpenConnectionCookie = 0;
 static const unsigned short SAMP_OPEN_CONNECTION_COOKIE_XOR = 0x6969;
 static const int MAX_OFFLINE_DATA_LENGTH=400; // I set this because I limit ID_CONNECTION_REQUEST to 512 bytes, and the password is appended to that packet.
 
-//#define _DO_PRINTF
-
 // UPDATE_THREAD_POLL_TIME is how often the update thread will poll to see
 // if receive wasn't called within UPDATE_THREAD_UPDATE_TIME.  If it wasn't called within that time,
 // the updating thread will activate and take over network communication until Receive is called again.
 //static const unsigned int UPDATE_THREAD_UPDATE_TIME=30;
 //static const unsigned int UPDATE_THREAD_POLL_TIME=30;
-
-//#define _TEST_AES
 
 Packet *AllocPacket(unsigned dataSize)
 {
@@ -2488,17 +2484,8 @@ void RakPeer::ParseConnectionRequestPacket( RakPeer::RemoteSystemStruct *remoteS
 			if ( usingSecurity == false )
 #endif
 			{
-#ifdef _TEST_AES
-				unsigned char AESKey[ 16 ];
-				// Save the AES key
-				for ( i = 0; i < 16; i++ )
-					AESKey[ i ] = i;
-
-				OnConnectionRequest( remoteSystem, AESKey, true );
-#else
 				// Connect this player assuming we have open slots
 				OnConnectionRequest( remoteSystem, 0, false );
-#endif
 			}
 #if !defined(_COMPATIBILITY_1)
 			else
@@ -3860,9 +3847,6 @@ bool RakPeer::RunUpdateCycle( void )
 			else
 				if ( errorCode != 0 && endThreads == false )
 				{
-#ifdef _DO_PRINTF
-					printf( "Server RecvFrom critical failure!\n" );
-#endif
 					// Some kind of critical error
 					// peer->isRecvfromThreadActive=false;
 					endThreads = true;
@@ -4084,9 +4068,6 @@ bool RakPeer::RunUpdateCycle( void )
 				}
 				// else connection shutting down, don't bother telling the user
 
-#ifdef _DO_PRINTF
-				printf("Connection dropped for player %i:%i\n", playerId.binaryAddress, playerId.port);
-#endif
 				CloseConnectionInternal( playerId, false, true, 0 );
 				continue;
 			}
@@ -4178,9 +4159,6 @@ bool RakPeer::RunUpdateCycle( void )
 					else
 					{
 						CloseConnectionInternal( playerId, false, true, 0 );
-#ifdef _DO_PRINTF
-						printf("Temporarily banning %i:%i for sending nonsense data\n", playerId.binaryAddress, playerId.port);
-#endif
 
 #if !defined(_COMPATIBILITY_1)
 						AddToBanList(PlayerIDToDottedIP(playerId), remoteSystem->reliabilityLayer.GetTimeoutTime());
@@ -4501,9 +4479,6 @@ bool RakPeer::RunUpdateCycle( void )
 						{
 							// Tell the remote system the connection failed
 							NotifyAndFlagForDisconnect(playerId, true, 0);
-#ifdef _DO_PRINTF
-							printf( "Error: Got a connection accept when we didn't request the connection.\n" );
-#endif
 							delete [] data;
 						}
 					}
@@ -4590,9 +4565,6 @@ void* UpdateNetworkLoop( void* arguments )
 #ifdef _DEBUG
 
 			assert( 0 );
-	#ifdef _DO_PRINTF
-			printf( "WaitForSingleObject failed (%d)\n", GetLastError() );
-	#endif
 #endif
 		}
 
