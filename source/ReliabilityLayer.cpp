@@ -136,7 +136,6 @@ void ReliabilityLayer::SetSocket( SOCKET s )
 SOCKET ReliabilityLayer::GetSocket( void )
 {
 	return INVALID_SOCKET;
-#endif
 }
 
 //-------------------------------------------------------------------------------------------------------
