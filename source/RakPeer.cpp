@@ -43,16 +43,7 @@
 #include <malloc.h>
 #endif
 
-#ifdef _COMPATIBILITY_1
-//
-#elif defined(_WIN32)
-//
-#elif defined(_COMPATIBILITY_2)
-#include "Compatibility2Includes.h"
 #include <stdlib.h>
-#else
-#include <stdlib.h>
-#endif
 
 #ifdef _MSC_VER
 #pragma warning( push )
@@ -146,9 +137,6 @@ Packet *AllocPacket(unsigned dataSize, unsigned char *data)
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 RakPeer::RakPeer()
 {
-#if !defined(_COMPATIBILITY_1)
-	usingSecurity = false;
-#endif
 	memset( frequencyTable, 0, sizeof( unsigned int ) * 256 );
 	rawBytesSent = rawBytesReceived = compressedBytesSent = compressedBytesReceived = 0;
 	outputTree = inputTree = 0;
@@ -298,7 +286,6 @@ bool RakPeer::Initialize( unsigned short maxConnections, unsigned short localPor
 
 		ClearBufferedCommands();
 
-#if !defined(_COMPATIBILITY_1)
 		char ipList[ 10 ][ 16 ];
 		SocketLayer::Instance()->GetMyIP( ipList );
 		myPlayerId.port = localPort;
@@ -306,20 +293,13 @@ bool RakPeer::Initialize( unsigned short maxConnections, unsigned short localPor
 			myPlayerId.binaryAddress = inet_addr( ipList[ 0 ] );
 		else
 			myPlayerId.binaryAddress = inet_addr( forceHostAddress );
-#else
-		myPlayerId=UNASSIGNED_PLAYER_ID;
-#endif
 		{
 #ifdef _WIN32
 
 			if ( isMainLoopThreadActive == false )
 			{
 				unsigned ProcessPacketsThreadID = 0;
-#ifdef _COMPATIBILITY_1
-				processPacketsThreadHandle = ( HANDLE ) _beginthreadex( NULL, 0, UpdateNetworkLoop, this, 0, &ProcessPacketsThreadID );
-#else
 				processPacketsThreadHandle = ( HANDLE ) _beginthreadex( NULL, MAX_ALLOCA_STACK_ALLOCATION*2, UpdateNetworkLoop, this, 0, &ProcessPacketsThreadID );
-#endif
 
 				//BOOL b =  SetThreadPriority(
 				//	processPacketsThreadHandle,
@@ -402,7 +382,6 @@ bool RakPeer::Initialize( unsigned short maxConnections, unsigned short localPor
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::InitializeSecurity(const char *pubKeyE, const char *pubKeyN, const char *privKeyP, const char *privKeyQ )
 {
-#if !defined(_COMPATIBILITY_1)
 	if ( endThreads == false )
 		return ;
 
@@ -452,7 +431,6 @@ void RakPeer::InitializeSecurity(const char *pubKeyE, const char *pubKeyN, const
 
 		keysLocallyGenerated = false;
 	}
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -462,12 +440,10 @@ void RakPeer::InitializeSecurity(const char *pubKeyE, const char *pubKeyN, const
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::DisableSecurity( void )
 {
-#if !defined(_COMPATIBILITY_1)
 	if ( endThreads == false )
 		return ;
 
 	usingSecurity = false;
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -582,11 +558,7 @@ bool RakPeer::Connect( const char* host, unsigned short remotePort, char* passwo
 	// If the host starts with something other than 0, 1, or 2 it's (probably) a domain name.
 	if ( host[ 0 ] < '0' || host[ 0 ] > '2' )
 	{
-#if !defined(_COMPATIBILITY_1)
 		host = ( char* ) SocketLayer::Instance()->DomainNameToIP( host );
-#else
-		return false;
-#endif
 		if (host==0)
 			return false;
 	}
@@ -1108,11 +1080,7 @@ bool RakPeer::RPC( int* uniqueID, const char *data, unsigned int bitLength, Pack
 
 	if ( broadcast == false )
 	{
-#if !defined(_COMPATIBILITY_1)
 		sendList = (unsigned *)alloca( sizeof(unsigned) );
-#else
-		sendList = new unsigned[1];
-#endif
 
 		remoteSystemIndex = GetIndexFromPlayerID( playerId, false );
 
@@ -1129,11 +1097,7 @@ bool RakPeer::RPC( int* uniqueID, const char *data, unsigned int bitLength, Pack
 	}
 	else
 	{
-#if !defined(_COMPATIBILITY_1)
 		sendList = (unsigned *)alloca( sizeof(unsigned) * maximumNumberOfPeers );
-#else
-		sendList = new unsigned[maximumNumberOfPeers];
-#endif
 
 		for ( remoteSystemIndex = 0; remoteSystemIndex < maximumNumberOfPeers; remoteSystemIndex++ )
 		{
@@ -1147,9 +1111,6 @@ bool RakPeer::RPC( int* uniqueID, const char *data, unsigned int bitLength, Pack
 
 	if ( sendListSize == 0 && routeSend == false )
 	{
-#if defined(_COMPATIBILITY_1)
-		delete [] sendList;
-#endif
 		return false;
 	}
 
@@ -1212,10 +1173,6 @@ bool RakPeer::RPC( int* uniqueID, const char *data, unsigned int bitLength, Pack
 			);
 		}
 	}
-
-#if defined(_COMPATIBILITY_1)
-	delete [] sendList;
-#endif
 
 	return true;
 }
@@ -1524,13 +1481,7 @@ void RakPeer::Ping( const char* host, unsigned short remotePort, bool onlyReplyO
 
 	// If the host starts with something other than 0, 1, or 2 it's (probably) a domain name.
 	if ( host[ 0 ] < '0' || host[ 0 ] > '2' )
-	{
-#if !defined(_COMPATIBILITY_1)
 		host = ( char* ) SocketLayer::Instance()->DomainNameToIP( host );
-#else
-		return;
-#endif
-	}
 
 	PlayerID playerId;
 	IPToPlayerID( host, remotePort, &playerId );
@@ -1831,7 +1782,6 @@ int RakPeer::GetMTUSize( void ) const
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 unsigned int RakPeer::GetNumberOfAddresses( void )
 {
-#if !defined(_COMPATIBILITY_1)
 	char ipList[ 10 ][ 16 ];
 	memset( ipList, 0, sizeof( char ) * 16 * 10 );
 	SocketLayer::Instance()->GetMyIP( ipList );
@@ -1842,10 +1792,6 @@ unsigned int RakPeer::GetNumberOfAddresses( void )
 		i++;
 
 	return i;
-#else
-	assert(0);
-	return 0;
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1857,14 +1803,9 @@ unsigned int RakPeer::GetNumberOfAddresses( void )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const char* RakPeer::PlayerIDToDottedIP( const PlayerID playerId ) const
 {
-#if !defined(_COMPATIBILITY_1)
 	in_addr in;
 	in.s_addr = playerId.binaryAddress;
 	return inet_ntoa( in );
-#else
-	assert(0); // Not supported
-	return 0;
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1873,7 +1814,6 @@ const char* RakPeer::PlayerIDToDottedIP( const PlayerID playerId ) const
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const char* RakPeer::GetLocalIP( unsigned int index )
 {
-#if !defined(_COMPATIBILITY_1)
 	static char ipList[ 10 ][ 16 ];
 
 	if ( index >= 10 )
@@ -1884,10 +1824,6 @@ const char* RakPeer::GetLocalIP( unsigned int index )
 	SocketLayer::Instance()->GetMyIP( ipList );
 
 	return ipList[ index ];
-#else
-	assert(0);
-	return 0;
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1928,13 +1864,7 @@ void RakPeer::AdvertiseSystem( const char *host, unsigned short remotePort, cons
 
 	// If the host starts with something other than 0, 1, or 2 it's (probably) a domain name.
 	if ( host[ 0 ] < '0' || host[ 0 ] > '2' )
-	{
-#if !defined(_COMPATIBILITY_1)
 		host = ( char* ) SocketLayer::Instance()->DomainNameToIP( host );
-#else
-		return;
-#endif
-	}
 
 	PlayerID playerId;
 	IPToPlayerID( host, remotePort, &playerId );
@@ -1957,11 +1887,7 @@ void RakPeer::AdvertiseSystem( const char *host, unsigned short remotePort, cons
 	// If the host starts with something other than 0, 1, or 2 it's (probably) a domain name.
 	if ( host[ 0 ] < '0' || host[ 0 ] > '2' )
 	{
-#if !defined(_COMPATIBILITY_1)
 		host = ( char* ) SocketLayer::Instance()->DomainNameToIP( host );
-#else
-		return;
-#endif
 	}
 
 	PlayerID playerId;
@@ -2480,17 +2406,11 @@ void RakPeer::ParseConnectionRequestPacket( RakPeer::RemoteSystemStruct *remoteS
 		{
 			remoteSystem->connectMode=RemoteSystemStruct::HANDLING_CONNECTION_REQUEST;
 
-#if !defined(_COMPATIBILITY_1)
 			if ( usingSecurity == false )
-#endif
-			{
 				// Connect this player assuming we have open slots
 				OnConnectionRequest( remoteSystem, 0, false );
-			}
-#if !defined(_COMPATIBILITY_1)
 			else
 				SecuredConnectionResponse( playerId );
-#endif
 		}
 		else
 		{
@@ -2749,14 +2669,12 @@ bool RakPeer::HandleRPCPacket( const char *data, int length, PlayerID playerId )
 
 	bool usedAlloca = false;
 
-#if !defined(_COMPATIBILITY_1)
 	if ( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) < MAX_ALLOCA_STACK_ALLOCATION )
 	{
 		userData = (unsigned char*)alloca( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) );
 		usedAlloca = true;
 	}
 	else
-#endif
 		userData = new unsigned char[BITS_TO_BYTES( rpcParms.numberOfBitsOfData )];
 
 	if ( incomingBitStream.ReadBits( userData, rpcParms.numberOfBitsOfData, false ) == false )
@@ -2805,7 +2723,6 @@ void RakPeer::HandleRPCReplyPacket( const char *data, int length, PlayerID playe
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::GenerateSYNCookieRandomNumber( void )
 {
-#if !defined(_COMPATIBILITY_1)
 	unsigned int number;
 	int i;
 	memcpy( oldRandomNumber, newRandomNumber, sizeof( newRandomNumber ) );
@@ -2817,13 +2734,11 @@ void RakPeer::GenerateSYNCookieRandomNumber( void )
 	}
 
 	randomNumberExpirationTime = RakNet::GetTime() + SYN_COOKIE_OLD_RANDOM_NUMBER_DURATION;
-#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::SecuredConnectionResponse( const PlayerID playerId )
 {
-#if !defined(_COMPATIBILITY_1)
 	CSHA1 sha1;
 	RSA_BIT_SIZE n;
 	big::u32 e;
@@ -2862,12 +2777,10 @@ void RakPeer::SecuredConnectionResponse( const PlayerID playerId )
 	// All secure connection requests are unreliable because the entire process needs to be restarted if any part fails.
 	// Connection requests are resent periodically
 	SendImmediate(( char* ) connectionRequestResponse, (1 + sizeof( big::u32 ) + sizeof( RSA_BIT_SIZE ) + 20) *8, SYSTEM_PRIORITY, UNRELIABLE, 0, playerId, false, false, RakNet::GetTime());
-#endif
 }
 
 void RakPeer::SecuredConnectionConfirmation( RakPeer::RemoteSystemStruct * remoteSystem, char* data )
 {
-#if !defined(_COMPATIBILITY_1)
 	int i, j;
 	unsigned char randomNumber[ 20 ];
 	unsigned int number;
@@ -2968,8 +2881,6 @@ void RakPeer::SecuredConnectionConfirmation( RakPeer::RemoteSystemStruct * remot
 		// Connection requests are resent periodically
 		SendImmediate((char*)reply, (1 + 20 + sizeof( RSA_BIT_SIZE )) * 8, SYSTEM_PRIORITY, UNRELIABLE, 0, remoteSystem->playerId, false, false, RakNet::GetTime());
 //	}
-
-#endif
 }
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 bool RakPeer::AllowIncomingConnections(void) const
@@ -3150,11 +3061,7 @@ bool RakPeer::SendImmediate( char *data, int numberOfBitsToSend, PacketPriority 
 	// 03/06/06 - If broadcast is false, use the optimized version of GetIndexFromPlayerID
 	if (broadcast==false)
 	{
-#if !defined(_COMPATIBILITY_1)
 		sendList=(unsigned *)alloca(sizeof(unsigned));
-#else
-		sendList = new unsigned[1];
-#endif
 		remoteSystemIndex=GetIndexFromPlayerID( playerId, true );
 		if (remoteSystemIndex!=(unsigned)-1 &&
 			remoteSystemList[remoteSystemIndex].connectMode!=RemoteSystemStruct::DISCONNECT_ASAP && 
@@ -3167,13 +3074,8 @@ bool RakPeer::SendImmediate( char *data, int numberOfBitsToSend, PacketPriority 
 	}
 	else
 	{
-#if !defined(_COMPATIBILITY_1)
 	//sendList=(unsigned *)alloca(sizeof(unsigned)*remoteSystemListSize);
 		sendList=(unsigned *)alloca(sizeof(unsigned)*maximumNumberOfPeers);
-#else
-	//sendList = new unsigned[remoteSystemListSize];
-		sendList = new unsigned[maximumNumberOfPeers];
-#endif
 
 		// remoteSystemList in network thread
 		for ( remoteSystemIndex = 0; remoteSystemIndex < maximumNumberOfPeers; remoteSystemIndex++ )
@@ -3186,9 +3088,6 @@ bool RakPeer::SendImmediate( char *data, int numberOfBitsToSend, PacketPriority 
 
 	if (sendListSize==0)
 	{
-#if defined(_COMPATIBILITY_1)
-		delete [] sendList;
-#endif
 		return false;
 	}
 
@@ -3223,10 +3122,6 @@ bool RakPeer::SendImmediate( char *data, int numberOfBitsToSend, PacketPriority 
 			remoteSystemList[sendList[sendListIndex]].lastReliableSend=(RakNetTime)(currentTime/(RakNetTimeNS)1000);
 	}
 
-#if defined(_COMPATIBILITY_1)
-	delete [] sendList;
-#endif
-
 	// Return value only meaningful if true was passed for useCallerDataAllocation.  Means the reliability layer used that data copy, so the caller should not deallocate it
 	return callerDataAllocationUsed;
 }
@@ -3259,11 +3154,7 @@ bool RakPeer::HandleBufferedRPC(BufferedCommandStruct *bcs, RakNetTime time)
 	// 03/06/06 - If broadcast is false, use the optimized version of GetIndexFromPlayerID
 	if (bcs->broadcast==false)
 	{
-#if !defined(_COMPATIBILITY_1)
 		sendList=(unsigned *)alloca(sizeof(unsigned));
-#else
-		sendList = new unsigned[1];
-#endif
 		remoteSystemIndex=GetIndexFromPlayerID( bcs->playerId, true );
 		if (remoteSystemIndex!=(unsigned)-1)
 		{
@@ -3273,11 +3164,7 @@ bool RakPeer::HandleBufferedRPC(BufferedCommandStruct *bcs, RakNetTime time)
 	}
 	else
 	{
-#if !defined(_COMPATIBILITY_1)
 	sendList=(unsigned *)alloca(sizeof(unsigned)*maximumNumberOfPeers);
-#else
-	sendList = new unsigned[maximumNumberOfPeers];
-#endif
 
 		for ( remoteSystemIndex = 0; remoteSystemIndex < maximumNumberOfPeers; remoteSystemIndex++ )
 		{
@@ -3288,10 +3175,6 @@ bool RakPeer::HandleBufferedRPC(BufferedCommandStruct *bcs, RakNetTime time)
 
 	if (sendListSize==0)
 	{
-		#if defined(_COMPATIBILITY_1)
-		delete [] sendList;
-		#endif
-
 		return false;
 	}
 
@@ -3344,10 +3227,6 @@ bool RakPeer::HandleBufferedRPC(BufferedCommandStruct *bcs, RakNetTime time)
 
 		callerAllocationDataUsed=SendImmediate((char*)outgoingBitStream.GetData(), outgoingBitStream.GetNumberOfBitsUsed(), bcs->priority, bcs->reliability, bcs->orderingChannel, remoteSystemList[sendList[sendListIndex]].playerId, false, true, time);
 	}
-
-#if defined(_COMPATIBILITY_1)
-	delete [] sendList;
-#endif
 
 	return callerAllocationDataUsed;
 }
@@ -3479,7 +3358,6 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 	playerId.binaryAddress = binaryAddress;
 	playerId.port = port;
 
-#if !defined(_COMPATIBILITY_1)
 	if (rakPeer->IsBanned( rakPeer->PlayerIDToDottedIP( playerId ) ))
 	{
 		for (i=0; i < rakPeer->messageHandlerList.Size(); i++)
@@ -3496,7 +3374,6 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 
 		return;
 	}
-#endif
 
 	// We didn't check this datagram to see if it came from a connected system or not yet.
 	// Therefore, this datagram must be under 17 bits - otherwise it may be normal network traffic as the min size for a raknet send is 17 bits
@@ -3745,10 +3622,8 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 
 		if (length > 512)
 		{
-#if !defined(_COMPATIBILITY_1)
 			// Flood attack?  Unknown systems should never send more than a small amount of data. Do a short ban
 			rakPeer->AddToBanList(rakPeer->PlayerIDToDottedIP(playerId), 10000);
-#endif
 			return;
 		}
 
@@ -3759,7 +3634,6 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 			if ( (unsigned char)(data)[0] == ID_PING ||
 				rakPeer->AllowIncomingConnections() ) // Open connections with players
 			{
-#if !defined(_COMPATIBILITY_1)
 				RakNet::BitStream inBitStream( (unsigned char *) data, length, false );
 				inBitStream.IgnoreBits(8);
 				RakNetTime sendPingTime;
@@ -3780,7 +3654,6 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 					rakPeer->messageHandlerList[i]->OnDirectSocketSend((const char*)outBitStream.GetData(), outBitStream.GetNumberOfBytesUsed(), playerId);
 
 				SocketLayer::Instance()->SendTo( rakPeer->connectionSocket, (const char*)outBitStream.GetData(), outBitStream.GetNumberOfBytesUsed(), (char*)rakPeer->PlayerIDToDottedIP(playerId) , playerId.port );
-#endif
 			}
 		}
 		// UNCONNECTED MESSAGE Pong with no data.  TODO - Problem - this matches a reliable send of other random data.
@@ -4159,10 +4032,7 @@ bool RakPeer::RunUpdateCycle( void )
 					else
 					{
 						CloseConnectionInternal( playerId, false, true, 0 );
-
-#if !defined(_COMPATIBILITY_1)
 						AddToBanList(PlayerIDToDottedIP(playerId), remoteSystem->reliabilityLayer.GetTimeoutTime());
-#endif
 						delete [] data;
 					}
 				}
@@ -4328,7 +4198,6 @@ bool RakPeer::RunUpdateCycle( void )
 						packet->playerIndex = ( PlayerIndex ) remoteSystemIndex;
 						AddPacketToProducer(packet);
 					}
-#if !defined(_COMPATIBILITY_1)
 					else if ( (unsigned char)(data)[0] == ID_SECURED_CONNECTION_RESPONSE &&
 						byteSize == 1 + sizeof( big::u32 ) + sizeof( RSA_BIT_SIZE ) + 20 )
 					{
@@ -4398,7 +4267,6 @@ bool RakPeer::RunUpdateCycle( void )
 						}
 						delete [] data;
 					}
-#endif // #if !defined(_COMPATIBILITY_1)
 					else if ( (unsigned char)(data)[0] == ID_DETECT_LOST_CONNECTIONS && byteSize == sizeof(unsigned char) )
 					{
 						// Do nothing

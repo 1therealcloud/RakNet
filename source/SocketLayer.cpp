@@ -135,7 +135,7 @@ SocketLayer::SocketLayer()
 
 		if ( WSAStartup( MAKEWORD( 2, 2 ), &winsockInfo ) != 0 )
 		{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 			DWORD dwIOError = GetLastError();
 			LPVOID messageBuffer;
 			FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -183,7 +183,7 @@ SOCKET SocketLayer::Connect( SOCKET writeSocket, unsigned int binaryAddress, uns
 
 	if ( connect( writeSocket, ( struct sockaddr * ) & connectSocketAddress, sizeof( struct sockaddr ) ) != 0 )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -212,7 +212,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 
 	if ( listenSocket == INVALID_SOCKET )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -231,7 +231,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 
 	if ( setsockopt( listenSocket, SOL_SOCKET, SO_REUSEADDR, ( char * ) & sock_opt, sizeof ( sock_opt ) ) == -1 )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -252,7 +252,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	sock_opt=1024*16;
 	setsockopt(listenSocket, SOL_SOCKET, SO_SNDBUF, ( char * ) & sock_opt, sizeof ( sock_opt ) );
 
-	#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+	#if defined(_WIN32) && defined(_DEBUG)
 	// If this assert hit you improperly linked against WSock32.h
 	assert(IP_DONTFRAGMENT==14);
 	#endif
@@ -262,7 +262,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	/*
 	if ( setsockopt( listenSocket, IPPROTO_IP, IP_DONTFRAGMENT, ( char * ) & sock_opt, sizeof ( sock_opt ) ) == -1 )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -298,7 +298,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	// Set broadcast capable
 	if ( setsockopt( listenSocket, SOL_SOCKET, SO_BROADCAST, ( char * ) & sock_opt, sizeof( sock_opt ) ) == -1 )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -332,7 +332,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 
 	if ( ret == SOCKET_ERROR )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -350,7 +350,7 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	return listenSocket;
 }
 
-#if !defined(_COMPATIBILITY_1) && !defined(_COMPATIBILITY_2)
+#if !defined(_COMPATIBILITY_2)
 const char* SocketLayer::DomainNameToIP( const char *domainName )
 {
 	struct hostent * phe = gethostbyname( domainName );
@@ -434,7 +434,7 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 	{
 		*errorCode = 0;
 
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 
 		DWORD dwIOError = WSAGetLastError();
 
@@ -529,7 +529,7 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, unsigned int bi
 	}
 	else if ( dwIOError != WSAEWOULDBLOCK )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
@@ -556,14 +556,14 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, char ip[ 16 ], 
 	return SendTo( s, data, length, binaryAddress, port );
 }
 
-#if !defined(_COMPATIBILITY_1) && !defined(_COMPATIBILITY_2)
+#if !defined(_COMPATIBILITY_2)
 void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 {
 	char ac[ 80 ];
 
 	if ( gethostname( ac, sizeof( ac ) ) == SOCKET_ERROR )
 	{
-	#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+	#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -582,7 +582,7 @@ void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 
 	if ( phe == 0 )
 	{
-#if defined(_WIN32) && !defined(_COMPATIBILITY_1) && defined(_DEBUG)
+#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
 		LPVOID messageBuffer;
 		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,

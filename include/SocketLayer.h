@@ -19,9 +19,7 @@
 #ifndef __SOCKET_LAYER_H
 #define __SOCKET_LAYER_H
 
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h"
-#elif defined(_WIN32)
+#if defined(_WIN32)
 // IP_DONTFRAGMENT is different between winsock 1 and winsock 2.  Therefore, Winsock2.h must be linked againt Ws2_32.lib
 // winsock.h must be linked against WSock32.lib.  If these two are mixed up the flag won't work correctly
 #include <winsock2.h>
@@ -77,9 +75,7 @@ public:
 	// datagram port key
 	void SetDatagramPort( unsigned short port );
 
-	#if !defined(_COMPATIBILITY_1)
 	const char* DomainNameToIP( const char *domainName );
-	#endif
 	
 	/// Write \a data of length \a length to \a writeSocket
 	/// \param[in] writeSocket The socket to write to
@@ -93,12 +89,10 @@ public:
 	/// \param[in] errorCode An error code if an error occured .
 	/// \return Returns true if you successfully read data, false on error.
 	int RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode );
-	
-#if !defined(_COMPATIBILITY_1)
+
 	/// Retrieve all local IP address in a string format.
 	/// \param[in] ipList An array of ip address in dotted notation.
 	void GetMyIP( char ipList[ 10 ][ 16 ] );
-#endif
 	
 	/// Call sendto (UDP obviously)
 	/// \param[in] s the socket

@@ -753,7 +753,6 @@ protected:
 	unsigned short _minExtraPing, _extraPingVariance;
 #endif
 
-#if !defined(_COMPATIBILITY_1)
 	/// Encryption and security
 	big::RSACrypt<RSA_BIT_SIZE> rsacrypt;
 	big::u32 publicKeyE;
@@ -761,7 +760,6 @@ protected:
 	bool keysLocallyGenerated, usingSecurity;
 	RakNetTime randomNumberExpirationTime;
 	unsigned char newRandomNumber[ 20 ], oldRandomNumber[ 20 ];
-#endif
     
 	///How long it has been since things were updated by a call to receiveUpdate thread uses this to determine how long to sleep for
 	//unsigned int lastUserUpdateCycle;

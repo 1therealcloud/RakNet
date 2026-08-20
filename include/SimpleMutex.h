@@ -18,9 +18,7 @@
 #ifndef __SIMPLE_MUTEX_H
 #define __SIMPLE_MUTEX_H
 
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h"
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #else
 #include <pthread.h>

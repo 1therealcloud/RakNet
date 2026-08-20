@@ -23,8 +23,7 @@
 #include "PacketEnumerations.h"
 
 // alloca
-#ifdef _COMPATIBILITY_1
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #include <malloc.h>
 #elif defined(_COMPATIBILITY_2)
 #include "Compatibility2Includes.h"
@@ -1968,14 +1967,12 @@ void ReliabilityLayer::SplitPacket( InternalPacket *internalPacket, int MTUSize 
 	// Optimization
 	// internalPacketArray = new InternalPacket*[internalPacket->splitPacketCount];
 	bool usedAlloca=false;
-	#if !defined(_COMPATIBILITY_1)
 	if (sizeof( InternalPacket* ) * internalPacket->splitPacketCount < MAX_ALLOCA_STACK_ALLOCATION)
 	{
 		internalPacketArray = ( InternalPacket** ) alloca( sizeof( InternalPacket* ) * internalPacket->splitPacketCount );
 		usedAlloca=true;
 	}
 	else
-	#endif
 		internalPacketArray = new InternalPacket*[internalPacket->splitPacketCount];
 
 	for ( i = 0; i < ( int ) internalPacket->splitPacketCount; i++ )

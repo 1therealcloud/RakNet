@@ -18,9 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h"
-#elif defined(_WIN32)
+#if defined(_WIN32)
 // IP_DONTFRAGMENT is different between winsock 1 and winsock 2.  Therefore, Winsock2.h must be linked againt Ws2_32.lib
 // winsock.h must be linked against WSock32.lib.  If these two are mixed up the flag won't work correctly
 #include <winsock2.h>
@@ -103,9 +101,6 @@ bool PlayerID::operator<( const PlayerID& right ) const
 }
 char *PlayerID::ToString(bool writePort) const
 {
-#ifdef _COMPATIBILITY_1
-	return "";
-#else
 	static char str[22];
 	in_addr in;
 	in.s_addr = binaryAddress;
@@ -121,15 +116,10 @@ char *PlayerID::ToString(bool writePort) const
 	}
 	
 	return (char*) str;
-#endif
 }
 void PlayerID::SetBinaryAddress(const char *str)
 {
-#ifdef _COMPATIBILITY_1
-	binaryAddress=UNASSIGNED_PLAYER_ID.binaryAddress;
-#else
 	binaryAddress=inet_addr(str);
-#endif
 }
 
 NetworkID& NetworkID::operator = ( const NetworkID& input )

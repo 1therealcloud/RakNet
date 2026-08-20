@@ -15,9 +15,7 @@
 /// option) any later version.
 
 #include "GetTime.h"
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h" // Developers of a certain platform will know what to do here.
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #include <windows.h>
 #elif defined(_COMPATIBILITY_2)
 #include "Compatibility2Includes.h"

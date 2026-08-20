@@ -47,13 +47,7 @@ bool RakClient::Connect( const char* host, unsigned short serverPort, unsigned s
 	RakPeer::Initialize( 1, clientPort, threadSleepTimer );
 	
 	if ( host[ 0 ] < '0' || host[ 0 ] > '2' )
-	{
-#if !defined(_COMPATIBILITY_1)
 		host = ( char* ) SocketLayer::Instance()->DomainNameToIP( host );
-#else
-		return false;
-#endif
-	}
 	
 	unsigned i;
 	

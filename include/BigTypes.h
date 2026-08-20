@@ -29,8 +29,6 @@
 #ifndef BIGTYPES_H
 #define BIGTYPES_H
 
-#if !defined(_COMPATIBILITY_1)
-
 #include "Types.h"
 
 //#define BIG_USES_STRINGS /* undefining this means you cannot convert bigs to strings or from strings */
@@ -1810,8 +1808,6 @@ namespace big
 	
 #endif // BIG_USES_STRINGS
 }
-
-#endif // #if !defined(_COMPATIBILITY_1)
 
 #endif // BIGTYPES_H
 

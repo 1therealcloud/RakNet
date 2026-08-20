@@ -27,8 +27,6 @@
 #ifndef RSACRYPT_H
 #define RSACRYPT_H
 
-#if !defined(_COMPATIBILITY_1)
-
 #define RSASUPPORTGENPRIME
 #include "Export.h"
 /// Can't go under 256 or you'll need to disable the USEASSEMBLY macro in bigtypes.h
@@ -1248,8 +1246,6 @@ start_squaring:
 #ifdef _MSC_VER
 #pragma warning( pop )
 #endif
-
-#endif // #if !defined(_COMPATIBILITY_1)
 
 #endif // RSACRYPT_H
 

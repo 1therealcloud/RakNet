@@ -21,9 +21,7 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h"
-#elif defined(_WIN32)
+#if defined(_WIN32)
 #include <winsock2.h> // htonl
 #else
 #include <arpa/inet.h>
