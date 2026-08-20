@@ -113,7 +113,7 @@ char *PlayerID::ToString(bool writePort) const
 	if (writePort)
 	{
 		strcat(str, ":");
-#if (defined(__GNUC__)  || defined(__GCCXML__))
+#if defined(__GNUC__)
 		my_itoa(port, str+strlen(str), 10);
 #else
 		_itoa(port, str+strlen(str), 10);

@@ -165,7 +165,7 @@ namespace cat
 
 # error "Intel : I don't know your compiler"
 
-#elif (defined(__GNUC__)  || defined(__GCCXML__)) // GNU C++
+#elif defined(__GNUC__) // GNU C++
 
 #define COMPILER_GCC
 

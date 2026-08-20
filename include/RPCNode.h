@@ -38,7 +38,7 @@ struct RAK_DLL_EXPORT RPCNode
     union
     {
         void ( *staticFunctionPointer ) ( RPCParameters *rpcParms );
-#if (defined(__GNUC__) || defined(__GCCXML__))
+#if defined(__GNUC__)
         void (*memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
 #else
         void (__cdecl *memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
