@@ -14,10 +14,6 @@
 /// Software Foundation; either version 2 of the License, or (at your
 /// option) any later version.
 
-#if defined(_MSC_VER) && _MSC_VER < 1299 // VC6 doesn't support template specialization
-#include "BitStream_NoTemplate.cpp"
-#else
-
 #include "BitStream.h"
 #include <stdlib.h>
 #include <memory.h>
@@ -778,5 +774,3 @@ bool BitStream::DoEndianSwap(void) const
 #ifdef _MSC_VER
 #pragma warning( pop )
 #endif
-
-#endif // #if _MSC_VER < 1299 
