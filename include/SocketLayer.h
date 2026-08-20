@@ -74,6 +74,10 @@ public:
 	/// \return A new socket used for accepting clients 
 	SOCKET CreateBoundSocket( unsigned short port, bool blockingSocket, const char *forceHostAddress );
 
+	// for SA-MP compatibility
+	// datagram port key
+	void SetDatagramPort( unsigned short port );
+
 	#if !defined(_COMPATIBILITY_1)
 	const char* DomainNameToIP( const char *domainName );
 	#endif
@@ -130,6 +134,10 @@ public:
 	unsigned short GetLocalPort ( SOCKET s );
 private:
 	
+	// for SA-MP compatibility
+	// datagram port key
+	static unsigned short datagramPortKey;
+
 	static bool socketLayerStarted;
 #ifdef _WIN32
 	static WSADATA winsockInfo;

@@ -51,6 +51,11 @@ typedef unsigned int RakNetTime;
 typedef long long RakNetTimeNS;
 #endif
 
+// SA-MP 0.3.7-R5 is built with one-byte structure packing.  Keep the
+// public network/RPC structures packed even when a consumer is not compiled
+// globally with /Zp1 or -fpack-struct=1.
+#pragma pack(push, 1)
+
 /// \brief Unique identifier for a system.
 /// Corresponds to a network address
 struct RAK_DLL_EXPORT PlayerID
@@ -157,6 +162,8 @@ struct RPCParameters
 	/// If your send is not reliable, it will block for triple the ping time, or until you are disconnected, or you get a reply, whichever is first.
 	RakNet::BitStream *replyToSender;
 };
+
+#pragma pack(pop)
 
 ///  Index of an unassigned player
 const PlayerIndex UNASSIGNED_PLAYER_INDEX = 65535;

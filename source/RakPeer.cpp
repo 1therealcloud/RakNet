@@ -119,6 +119,9 @@ int PlayerIDAndIndexComp( const PlayerID &key, const PlayerIDAndIndex &data )
 #endif
 
 static const unsigned int SYN_COOKIE_OLD_RANDOM_NUMBER_DURATION = 5000;
+// SA-MP 0.3.7-R5 stores the 16-bit open-connection cookie outside the request queue.
+static unsigned short sampOpenConnectionCookie = 0;
+static const unsigned short SAMP_OPEN_CONNECTION_COOKIE_XOR = 0x6969;
 static const int MAX_OFFLINE_DATA_LENGTH=400; // I set this because I limit ID_CONNECTION_REQUEST to 512 bytes, and the password is appended to that packet.
 
 //#define _DO_PRINTF
@@ -610,6 +613,10 @@ bool RakPeer::Connect( const char* host, unsigned short remotePort, char* passwo
 	if ( ( strcmp( host, "127.0.0.1" ) == 0 || strcmp( host, "0.0.0.0" ) == 0 ) && remotePort == myPlayerId.port )
 		return false;
 
+	// for SA-MP compatibility
+	// datagram port key
+	SocketLayer::Instance()->SetDatagramPort( remotePort );
+
 	return SendConnectionRequest( host, remotePort, passwordData, passwordDataLength );
 }
 
@@ -902,7 +909,8 @@ Packet* RakPeer::Receive( void )
 	{
 		// Do RPC calls from the user thread, not the network update thread
 		// If we are currently blocking on an RPC reply, send ID_RPC to the blocker to handle rather than handling RPCs automatically
-		HandleRPCPacket( ( char* ) packet->data, packet->length, packet->playerId );
+		if ( packet->playerId != UNASSIGNED_PLAYER_ID )
+			HandleRPCPacket( ( char* ) packet->data, packet->length, packet->playerId );
 		DeallocatePacket( packet );
 
 		packet = ReceiveIgnoreRPC();
@@ -1044,44 +1052,24 @@ unsigned short RakPeer::GetMaximumNumberOfPeers( void ) const
 // This can be called whether the client is active or not, and registered functions stay registered unless unregistered with
 // UnregisterAsRemoteProcedureCall
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void RakPeer::RegisterAsRemoteProcedureCall( char* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
+// for SA-MP compatibility
+// numeric RPC identifiers
+void RakPeer::RegisterAsRemoteProcedureCall( int* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
 {
-	if ( uniqueID == 0 || uniqueID[ 0 ] == 0 || functionPointer == 0 )
+	if ( uniqueID == 0 || *((unsigned char*)uniqueID) == 0 || functionPointer == 0 )
 		return;
 
-	rpcMap.AddIdentifierWithFunction(uniqueID, (void*)functionPointer, false);
-
-	/*
-	char uppercaseUniqueID[ 256 ];
-
-	int counter = 0;
-
-	while ( uniqueID[ counter ] )
-	{
-		uppercaseUniqueID[ counter ] = ( char ) toupper( uniqueID[ counter ] );
-		counter++;
-	}
-
-	uppercaseUniqueID[ counter ] = 0;
-
-	// Each id must be unique
-//#ifdef _DEBUG
-//	assert( rpcTree.IsIn( RPCNode( uppercaseUniqueID, functionName ) ) == false );
-//#endif
-
-	if (rpcTree.IsIn( RPCNode( uppercaseUniqueID, functionName ) ))
-		return;
-
-	rpcTree.Add( RPCNode( uppercaseUniqueID, functionName ) );
-	*/
+	rpcMap.AddIdentifierWithFunction( uniqueID, (void*)functionPointer, false );
 }
 
-void RakPeer::RegisterClassMemberRPC( char* uniqueID, void *functionPointer )
+// for SA-MP compatibility
+// numeric RPC identifiers
+void RakPeer::RegisterClassMemberRPC( int* uniqueID, void *functionPointer )
 {
-	if ( uniqueID == 0 || uniqueID[ 0 ] == 0 || functionPointer == 0 )
+	if ( uniqueID == 0 || *((unsigned char*)uniqueID) == 0 || functionPointer == 0 )
 		return;
 
-	rpcMap.AddIdentifierWithFunction(uniqueID, functionPointer, true);
+	rpcMap.AddIdentifierWithFunction( uniqueID, functionPointer, true );
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1093,41 +1081,12 @@ void RakPeer::RegisterClassMemberRPC( char* uniqueID, void *functionPointer )
 // uniqueID: A null terminated string to identify this procedure.  Must match the parameter
 // passed to RegisterAsRemoteProcedureCall
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-void RakPeer::UnregisterAsRemoteProcedureCall( char* uniqueID )
+// for SA-MP compatibility
+// numeric RPC identifiers
+void RakPeer::UnregisterAsRemoteProcedureCall( int* uniqueID )
 {
-	if ( uniqueID == 0 || uniqueID[ 0 ] == 0 )
-		return;
-
-// Don't call this while running because if you remove RPCs and add them they will not match the indices on the other systems anymore
-#ifdef _DEBUG
-	assert(IsActive()==false);
-	//assert( strlen( uniqueID ) < 256 );
-#endif
-
-	rpcMap.RemoveNode(uniqueID);
-
-	/*
-	char uppercaseUniqueID[ 256 ];
-
-	strcpy( uppercaseUniqueID, uniqueID );
-
-	int counter = 0;
-
-	while ( uniqueID[ counter ] )
-	{
-		uppercaseUniqueID[ counter ] = ( char ) toupper( uniqueID[ counter ] );
-		counter++;
-	}
-
-	uppercaseUniqueID[ counter ] = 0;
-
-	// Unique ID must exist
-#ifdef _DEBUG
-	assert( rpcTree.IsIn( RPCNode( uppercaseUniqueID, 0 ) ) == true );
-#endif
-
-	rpcTree.Del( RPCNode( uppercaseUniqueID, 0 ) );
-	*/
+	// SA-MP 0.3.7-R5 implements this as a no-op.
+	(void)uniqueID;
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1150,261 +1109,151 @@ void RakPeer::UnregisterAsRemoteProcedureCall( char* uniqueID )
 // networkID: For static functions, pass UNASSIGNED_NETWORK_ID.  For member functions, you must derive from NetworkIDGenerator and pass the value returned by NetworkIDGenerator::GetNetworkID for that object.
 // replyFromTarget: If 0, this function is non-blocking.  Otherwise it will block while waiting for a reply from the target procedure, which is remtely written to RPCParameters::replyToSender and copied to replyFromTarget.  The block will return early on disconnect or if the sent packet is unreliable and more than 3X the ping has elapsed.
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-bool RakPeer::RPC( char* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+// for SA-MP compatibility
+// numeric RPC wire format
+bool RakPeer::RPC( int* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
 #ifdef _DEBUG
-	assert( uniqueID && uniqueID[ 0 ] );
-	assert(orderingChannel >=0 && orderingChannel < 32);
+	assert( uniqueID );
+	assert( orderingChannel >= 0 && orderingChannel < 32 );
 #endif
 
 	if ( uniqueID == 0 )
 		return false;
 
-	if ( strlen( uniqueID ) > 256 )
-	{
-#ifdef _DEBUG
-		assert( 0 );
-#endif
-		return false; // Unique ID is too long
-	}
-	if (replyFromTarget && blockOnRPCReply==true)
-	{
-		// TODO - this should be fixed eventually
-		// Prevent a bug where function A calls B (blocking) which calls C back on the sender, which calls D, and C is blocking.
-		// blockOnRPCReply is a shared variable so making it unset would unset both blocks, rather than the lowest on the callstack
-		// Fix by tracking which function the reply is for.
-		return false;
-	}
+	// SA-MP 0.3.7-R5 ignores NetworkID and blocking RPC replies in this path.
+	(void)networkID;
+	(void)replyFromTarget;
 
 	unsigned *sendList;
-//	bool callerAllocationDataUsed;
-	unsigned sendListSize;
+	unsigned sendListSize = 0;
+	unsigned remoteSystemIndex, sendListIndex;
+	bool routeSend = false;
 
-	// All this code modifies bcs->data and bcs->numberOfBitsToSend in order to transform an RPC request into an actual packet for SendImmediate
-	RPCIndex rpcIndex; // Index into the list of RPC calls so we know what number to encode in the packet
-//	char *userData; // RPC ID (the name of it) and a pointer to the data sent by the user
-//	int extraBuffer; // How many data bytes were allocated to hold the RPC header
-	unsigned remoteSystemIndex, sendListIndex; // Iterates into the list of remote systems
-//	int dataBlockAllocationLength; // Total number of bytes to allocate for the packet
-//	char *writeTarget; // Used to hold either a block of allocated data or the externally allocated data
-
-	sendListSize=0;
-	bool routeSend;
-	routeSend=false;
-
-	if (broadcast==false)
+	if ( broadcast == false )
 	{
 #if !defined(_COMPATIBILITY_1)
-		sendList=(unsigned *)alloca(sizeof(unsigned));
+		sendList = (unsigned *)alloca( sizeof(unsigned) );
 #else
 		sendList = new unsigned[1];
 #endif
-		remoteSystemIndex=GetIndexFromPlayerID( playerId, false );
-		if (remoteSystemIndex!=(unsigned)-1 &&
-			remoteSystemList[remoteSystemIndex].connectMode!=RemoteSystemStruct::DISCONNECT_ASAP && 
-			remoteSystemList[remoteSystemIndex].connectMode!=RemoteSystemStruct::DISCONNECT_ASAP_SILENTLY && 
-			remoteSystemList[remoteSystemIndex].connectMode!=RemoteSystemStruct::DISCONNECT_ON_NO_ACK)
+
+		remoteSystemIndex = GetIndexFromPlayerID( playerId, false );
+
+		if ( remoteSystemIndex != (unsigned)-1 &&
+			remoteSystemList[remoteSystemIndex].connectMode != RemoteSystemStruct::DISCONNECT_ASAP &&
+			remoteSystemList[remoteSystemIndex].connectMode != RemoteSystemStruct::DISCONNECT_ASAP_SILENTLY &&
+			remoteSystemList[remoteSystemIndex].connectMode != RemoteSystemStruct::DISCONNECT_ON_NO_ACK )
 		{
-			sendList[0]=remoteSystemIndex;
-			sendListSize=1;
+			sendList[0] = remoteSystemIndex;
+			sendListSize = 1;
 		}
-		else if (router)
-			routeSend=true;
+		else if ( router )
+			routeSend = true;
 	}
 	else
 	{
 #if !defined(_COMPATIBILITY_1)
-		sendList=(unsigned *)alloca(sizeof(unsigned)*maximumNumberOfPeers);
+		sendList = (unsigned *)alloca( sizeof(unsigned) * maximumNumberOfPeers );
 #else
 		sendList = new unsigned[maximumNumberOfPeers];
 #endif
 
 		for ( remoteSystemIndex = 0; remoteSystemIndex < maximumNumberOfPeers; remoteSystemIndex++ )
 		{
-			if ( remoteSystemList[ remoteSystemIndex ].isActive && remoteSystemList[ remoteSystemIndex ].playerId != playerId )
-				sendList[sendListSize++]=remoteSystemIndex;
+			if ( remoteSystemList[remoteSystemIndex].isActive &&
+				remoteSystemList[remoteSystemIndex].playerId != playerId )
+			{
+				sendList[sendListSize++] = remoteSystemIndex;
+			}
 		}
 	}
 
-	if (sendListSize==0 && routeSend==false)
+	if ( sendListSize == 0 && routeSend == false )
 	{
 #if defined(_COMPATIBILITY_1)
 		delete [] sendList;
 #endif
-
 		return false;
 	}
-	if (routeSend)
-		sendListSize=1;
 
 	RakNet::BitStream outgoingBitStream;
-	// remoteSystemList in network thread
-	for (sendListIndex=0; sendListIndex < (unsigned)sendListSize; sendListIndex++)
+
+	if ( routeSend )
 	{
-		outgoingBitStream.ResetWritePointer(); // Let us write at the start of the data block, rather than at the end
+		if ( shiftTimestamp )
+		{
+			outgoingBitStream.Write( (unsigned char)ID_TIMESTAMP );
+			outgoingBitStream.Write( RakNet::GetTime() );
+		}
 
-		if (shiftTimestamp)
-		{
-			outgoingBitStream.Write((unsigned char) ID_TIMESTAMP);
-			outgoingBitStream.Write(RakNet::GetTime());
-		}
-		outgoingBitStream.Write((unsigned char) ID_RPC);
-		if (routeSend)
-			rpcIndex=UNDEFINED_RPC_INDEX;
-		else
-			rpcIndex=remoteSystemList[sendList[sendListIndex]].rpcMap.GetIndexFromFunctionName(uniqueID); // Lots of trouble but we can only use remoteSystem->[whatever] in this thread so that is why this command was buffered
-		if (rpcIndex!=UNDEFINED_RPC_INDEX)
-		{
-			// We have an RPC name to an index mapping, so write the index
-			outgoingBitStream.Write(false);
-			outgoingBitStream.WriteCompressed(rpcIndex);
-		}
-		else
-		{
-			// No mapping, so write the encoded RPC name
-			outgoingBitStream.Write(true);
-			stringCompressor->EncodeString(uniqueID, 256, &outgoingBitStream);
-		}
-		outgoingBitStream.Write((bool) ((replyFromTarget!=0)==true));
+		outgoingBitStream.Write( (unsigned char)ID_RPC );
+		outgoingBitStream.Write( (unsigned char)(*uniqueID) );
 		outgoingBitStream.WriteCompressed( bitLength );
-		if (networkID==UNASSIGNED_NETWORK_ID)
-		{
-			// No object ID
-			outgoingBitStream.Write(false);
-		}
-		else
-		{
-			// Encode an object ID.  This will use pointer to class member RPC
-			outgoingBitStream.Write(true);
-			outgoingBitStream.Write(networkID);
-		}
-
 
 		if ( bitLength > 0 )
-			outgoingBitStream.WriteBits( (const unsigned char *) data, bitLength, false ); // Last param is false to write the raw data originally from another bitstream, rather than shifting from user data
+			outgoingBitStream.WriteBits( (const unsigned char *)data, bitLength, false );
 		else
-			outgoingBitStream.WriteCompressed( ( unsigned int ) 0 );
+			outgoingBitStream.WriteCompressed( (unsigned int)0 );
 
-		if (routeSend)
-			router->Send((const char*)outgoingBitStream.GetData(), outgoingBitStream.GetNumberOfBitsUsed(), priority,reliability,orderingChannel,playerId);
-		else
-			Send(&outgoingBitStream, priority, reliability, orderingChannel, remoteSystemList[sendList[sendListIndex]].playerId, false);
+		router->Send(
+			(const char*)outgoingBitStream.GetData(),
+			outgoingBitStream.GetNumberOfBitsUsed(),
+			priority,
+			reliability,
+			orderingChannel,
+			playerId
+		);
+	}
+	else
+	{
+		for ( sendListIndex = 0; sendListIndex < sendListSize; sendListIndex++ )
+		{
+			outgoingBitStream.ResetWritePointer();
+
+			if ( shiftTimestamp )
+			{
+				outgoingBitStream.Write( (unsigned char)ID_TIMESTAMP );
+				outgoingBitStream.Write( RakNet::GetTime() );
+			}
+
+			outgoingBitStream.Write( (unsigned char)ID_RPC );
+			outgoingBitStream.Write( (unsigned char)(*uniqueID) );
+			outgoingBitStream.WriteCompressed( bitLength );
+
+			if ( bitLength > 0 )
+				outgoingBitStream.WriteBits( (const unsigned char *)data, bitLength, false );
+			else
+				outgoingBitStream.WriteCompressed( (unsigned int)0 );
+
+			Send(
+				&outgoingBitStream,
+				priority,
+				reliability,
+				orderingChannel,
+				remoteSystemList[sendList[sendListIndex]].playerId,
+				false
+			);
+		}
 	}
 
 #if defined(_COMPATIBILITY_1)
 	delete [] sendList;
 #endif
 
-	if (replyFromTarget)
-	{
-		blockOnRPCReply=true;
-		// 04/20/06 Just do this transparently.
-		// We have to be able to read blocking packets out of order.  Otherwise, if two systems were to send blocking RPC calls to each other at the same time,
-		// and they also had ordered packets waiting before the block, it would be impossible to unblock.
-		// assert(reliability==RELIABLE || reliability==UNRELIABLE);
-		replyFromTargetBS=replyFromTarget;
-		replyFromTargetPlayer=playerId;
-		replyFromTargetBroadcast=broadcast;
-	}
-
-	// Do not enter this loop on blockOnRPCReply because it is a global which could be set to true by an RPC higher on the callstack, where one RPC was called while waiting for another RPC
-	if (replyFromTarget)
-//	if (blockOnRPCReply)
-	{
-//		Packet *p;
-		RakNetTime stopWaitingTime;
-//		RPCIndex arrivedRPCIndex;
-//		char uniqueIdentifier[256];
-		if (reliability==UNRELIABLE)
-			if (playerId==UNASSIGNED_PLAYER_ID)
-				stopWaitingTime=RakNet::GetTime()+1500; // Lets guess the ave. ping is 500.  Not important to be very accurate
-			else
-				stopWaitingTime=RakNet::GetTime()+GetAveragePing(playerId)*3;
-
-		// For reliable messages, block until we get a reply or the connection is lost
-		// For unreliable messages, block until we get a reply, the connection is lost, or 3X the ping passes
-		while (blockOnRPCReply &&
-			((reliability==RELIABLE || reliability==RELIABLE_ORDERED || reliability==RELIABLE_SEQUENCED) ||
-			RakNet::GetTime() < stopWaitingTime))
-		{
-
-			RakSleep(30);
-
-			if (routeSend==false && ValidSendTarget(playerId, broadcast)==false)
-				return false;
-
-			// I might not support processing other RPCs while blocking on one due to complexities I can't control
-			// Problem is FuncA calls FuncB which calls back to the sender FuncC. Sometimes it is desirable to call FuncC before returning a return value
-			// from FuncB - sometimes not.  There is also a problem with recursion where FuncA calls FuncB which calls FuncA - sometimes valid if
-			// a different control path is taken in FuncA. (This can take many different forms)
-			/*
-			// Same as Receive, but doesn't automatically do RPCs
-			p = ReceiveIgnoreRPC();
-			if (p)
-			{
-				// Process all RPC calls except for those calling the function we are currently blocking in (to prevent recursion).
-				if ( p->data[ 0 ] == ID_RPC )
-				{
-					RakNet::BitStream temp((unsigned char *) p->data, p->length, false);
-					RPCNode *rpcNode;
-					temp.IgnoreBits(8);
-					bool nameIsEncoded;
-					temp.Read(nameIsEncoded);
-					if (nameIsEncoded)
-					{
-						stringCompressor->DecodeString((char*)uniqueIdentifier, 256, &temp);
-					}
-					else
-					{
-						temp.ReadCompressed( arrivedRPCIndex );
-						rpcNode=rpcMap.GetNodeFromIndex( arrivedRPCIndex );
-						if (rpcNode==0)
-						{
-							// Invalid RPC format
-#ifdef _DEBUG
-							assert(0);
-#endif
-							DeallocatePacket(p);
-							continue;
-						}
-						else
-							strcpy(uniqueIdentifier, rpcNode->uniqueIdentifier);
-					}
-
-					if (strcmp(uniqueIdentifier, uniqueID)!=0)
-					{
-						HandleRPCPacket( ( char* ) p->data, p->length, p->playerId );
-						DeallocatePacket(p);
-					}
-					else
-					{
-						PushBackPacket(p, false);
-					}
-				}
-				else
-				{
-					PushBackPacket(p, false);
-				}
-			}
-			*/
-		}
-
-		blockOnRPCReply=false;
-	}
-
-	return true;	
+	return true;
 }
 
 
 #ifdef _MSC_VER
 #pragma warning( disable : 4701 ) // warning C4701: local variable <variable name> may be used without having been initialized
 #endif
-bool RakPeer::RPC( char* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+bool RakPeer::RPC( int* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
-	if (bitStream)
-		return RPC(uniqueID, (const char*) bitStream->GetData(), bitStream->GetNumberOfBitsUsed(), priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget);
-	else
-		return RPC(uniqueID, 0,0, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget);
+	if ( bitStream )
+		return RPC( uniqueID, (const char*)bitStream->GetData(), bitStream->GetNumberOfBitsUsed(), priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget );
+
+	return RPC( uniqueID, 0, 0, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget );
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2464,7 +2313,7 @@ RakNetStatisticsStruct * const RakPeer::GetStatistics( const PlayerID playerId )
 {
 	if (playerId==UNASSIGNED_PLAYER_ID)
 	{
-		bool firstWrite=false;
+		bool firstWrite=true;
 		static RakNetStatisticsStruct sum;
 		RakNetStatisticsStruct *systemStats;
 		// Return a crude sum
@@ -2472,10 +2321,13 @@ RakNetStatisticsStruct * const RakPeer::GetStatistics( const PlayerID playerId )
 		{
 			if (remoteSystemList[ i ].isActive)
 			{
-				systemStats=remoteSystemList[ i ].reliabilityLayer.GetStatistics();
+				systemStats=remoteSystemList[ i ].reliabilityLayer.GetStatistics( true );
 				
-				if (firstWrite==false)
+				if (firstWrite==true)
+				{
 					memcpy(&sum, systemStats, sizeof(RakNetStatisticsStruct));
+					firstWrite=false;
+				}
 				else
 					sum+=*systemStats;
 			}
@@ -2487,7 +2339,7 @@ RakNetStatisticsStruct * const RakPeer::GetStatistics( const PlayerID playerId )
 		RemoteSystemStruct * rss;
 	rss = GetRemoteSystemFromPlayerID( playerId, false, false );
 		if ( rss && endThreads==false )
-			return rss->reliabilityLayer.GetStatistics();
+			return rss->reliabilityLayer.GetStatistics( true );
 	}	
 
 	return 0;
@@ -2899,237 +2751,84 @@ RakNetTime RakPeer::GetBestClockDifferential( const PlayerID playerId ) const
 #ifdef _MSC_VER
 #pragma warning( disable : 4701 ) // warning C4701: local variable <variable name> may be used without having been initialized
 #endif
+// for SA-MP compatibility
+// numeric RPC wire format
 bool RakPeer::HandleRPCPacket( const char *data, int length, PlayerID playerId )
 {
-	// RPC BitStream format is
-	// ID_RPC - unsigned char
-	// Unique identifier string length - unsigned char
-	// The unique ID  - string with each letter in upper case, subtracted by 'A' and written in 5 bits.
-	// Number of bits of the data (int)
-	// The data
+	if ( data == 0 || length <= 0 )
+		return false;
 
-	RakNet::BitStream incomingBitStream( (unsigned char *) data, length, false );
-	char uniqueIdentifier[ 256 ];
-//	unsigned int bitLength;
+	RakNet::BitStream incomingBitStream( (unsigned char *)data, length, false );
+	unsigned char rpcIdentifier;
 	unsigned char *userData;
-	//bool hasTimestamp;
-	bool nameIsEncoded, networkIDIsEncoded;
-	RPCIndex rpcIndex;
-	RPCNode *node;
 	RPCParameters rpcParms;
-	NetworkID networkID;
-	bool blockingCommand;
 	RakNet::BitStream replyToSender;
-	rpcParms.replyToSender=&replyToSender;
 
-	rpcParms.recipient=this;
-	rpcParms.sender=playerId;
+	rpcParms.replyToSender = &replyToSender;
+	rpcParms.recipient = this;
+	rpcParms.sender = playerId;
+	rpcParms.input = 0;
+	rpcParms.numberOfBitsOfData = 0;
 
-	// Note to self - if I change this format then I have to change the PacketLogger class too
-	incomingBitStream.IgnoreBits(8);
-	if (data[0]==ID_TIMESTAMP)
-		incomingBitStream.IgnoreBits(8*(sizeof(RakNetTime)+sizeof(unsigned char)));
-	if ( incomingBitStream.Read( nameIsEncoded ) == false )
-	{
-#ifdef _DEBUG
-		assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
+	incomingBitStream.IgnoreBits( 8 );
+
+	if ( (unsigned char)data[0] == ID_TIMESTAMP )
+		incomingBitStream.IgnoreBits( 8 * (sizeof(RakNetTime) + sizeof(unsigned char)) );
+
+	if ( incomingBitStream.Read( rpcIdentifier ) == false )
 		return false;
-	}
 
-	if (nameIsEncoded)
-	{
-		if ( stringCompressor->DecodeString(uniqueIdentifier, 256, &incomingBitStream) == false )
-		{
-#ifdef _DEBUG
-			assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
-			return false;
-		}
+	int numericIdentifier = rpcIdentifier;
+	RPCIndex rpcIndex = rpcMap.GetIndexFromFunctionName( &numericIdentifier );
 
-		rpcIndex = rpcMap.GetIndexFromFunctionName(uniqueIdentifier);
-	}
-	else
-	{
-		if ( incomingBitStream.ReadCompressed( rpcIndex ) == false )
-		{
-#ifdef _DEBUG
-			assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
-			return false;
-		}
-	}
-	if ( incomingBitStream.Read( blockingCommand ) == false )
-	{
-#ifdef _DEBUG
-		assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
+	// R5 reserves 0xFF as UNDEFINED_RPC_INDEX even though the table has 256 slots.
+	if ( rpcIndex == (RPCIndex)UNDEFINED_RPC_INDEX )
 		return false;
-	}
 
-	/*
-	if ( incomingBitStream.Read( rpcParms.hasTimestamp ) == false )
-	{
-#ifdef _DEBUG
-		assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
+	RPCNode *node = rpcMap.GetNodeFromIndex( rpcIndex );
+	if ( node == 0 )
 		return false;
-	}
-	*/
 
 	if ( incomingBitStream.ReadCompressed( rpcParms.numberOfBitsOfData ) == false )
-	{
-#ifdef _DEBUG
-		assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
 		return false;
-	}
 
-	if ( incomingBitStream.Read( networkIDIsEncoded ) == false )
-	{
-#ifdef _DEBUG
-		assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
-		return false;
-	}
-
-	if (networkIDIsEncoded)
-	{
-		if ( incomingBitStream.Read( networkID ) == false )
-		{
-#ifdef _DEBUG
-			assert( 0 ); // bitstream was not long enough.  Some kind of internal error
-#endif
-			return false;
-		}
-	}
-
-	if (rpcIndex==UNDEFINED_RPC_INDEX)
-	{
-		// Unregistered function
-		RakAssert(0);
-		return false;
-	}
-
-	node = rpcMap.GetNodeFromIndex(rpcIndex);
-	if (node==0)
-	{
-#ifdef _DEBUG
-		assert( 0 ); // Should never happen except perhaps from threading errors?  No harm in checking anyway
-#endif
-		return false;
-	}
-
-	// Make sure the call type matches - if this is a pointer to a class member then networkID must be defined.  Otherwise it must not be defined
-	if (node->isPointerToMember==true && networkIDIsEncoded==false)
-	{
-		// If this hits then this pointer was registered as a class member function but the packet does not have an NetworkID.
-		// Most likely this means this system registered a function with REGISTER_CLASS_MEMBER_RPC and the remote system called it
-		// using the unique ID for a function registered with REGISTER_STATIC_RPC.
-		assert(0);
-		return false;
-	}
-
-	if (node->isPointerToMember==false && networkIDIsEncoded==true)
-	{
-		// If this hits then this pointer was not registered as a class member function but the packet does have an NetworkID.
-		// Most likely this means this system registered a function with REGISTER_STATIC_RPC and the remote system called it
-		// using the unique ID for a function registered with REGISTER_CLASS_MEMBER_RPC.
-		assert(0);
-		return false;
-	}
-
-	if (nameIsEncoded && GetRemoteSystemFromPlayerID(playerId, false, true))
-	{
-		// Send ID_RPC_MAPPING to the sender so they know what index to use next time
-		RakNet::BitStream rpcMapBitStream;
-		rpcMapBitStream.Write((unsigned char)ID_RPC_MAPPING);
-		stringCompressor->EncodeString(node->uniqueIdentifier, 256, &rpcMapBitStream);
-        rpcMapBitStream.WriteCompressed(rpcIndex);
-		SendBuffered( (const char*)rpcMapBitStream.GetData(), rpcMapBitStream.GetNumberOfBitsUsed(), HIGH_PRIORITY, UNRELIABLE, 0, playerId, false, RemoteSystemStruct::NO_ACTION );
-	}
-
-	// Call the function
 	if ( rpcParms.numberOfBitsOfData == 0 )
 	{
-		rpcParms.input=0;
-		if (networkIDIsEncoded)
-		{
-			void *object = NetworkIDGenerator::GET_OBJECT_FROM_ID(networkID);
-			if (object)
-				(node->memberFunctionPointer(object, &rpcParms));
-		}
-		else
-		{
-			node->staticFunctionPointer( &rpcParms );
-		}
+		// R5 dispatches the stored function pointer directly; it does not branch on isPointerToMember here.
+		node->staticFunctionPointer( &rpcParms );
+		return true;
+	}
+
+	if ( incomingBitStream.GetNumberOfUnreadBits() < (int)rpcParms.numberOfBitsOfData )
+		return false;
+
+	bool usedAlloca = false;
+
+#if !defined(_COMPATIBILITY_1)
+	if ( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) < MAX_ALLOCA_STACK_ALLOCATION )
+	{
+		userData = (unsigned char*)alloca( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) );
+		usedAlloca = true;
 	}
 	else
+#endif
+		userData = new unsigned char[BITS_TO_BYTES( rpcParms.numberOfBitsOfData )];
+
+	if ( incomingBitStream.ReadBits( userData, rpcParms.numberOfBitsOfData, false ) == false )
 	{
-		if ( incomingBitStream.GetNumberOfUnreadBits() == 0 )
-		{
-#ifdef _DEBUG
-			assert( 0 );
-#endif
-			return false; // No data was appended!
-		}
-
-		// We have to copy into a new data chunk because the user data might not be byte aligned.
-		bool usedAlloca=false;
-#if !defined(_COMPATIBILITY_1)
-		if (BITS_TO_BYTES( incomingBitStream.GetNumberOfUnreadBits() ) < MAX_ALLOCA_STACK_ALLOCATION)
-		{
-			userData = ( unsigned char* ) alloca( BITS_TO_BYTES( incomingBitStream.GetNumberOfUnreadBits() ) );
-			usedAlloca=true;
-		}
-		else
-#endif
-			userData = new unsigned char[BITS_TO_BYTES(incomingBitStream.GetNumberOfUnreadBits())];
-
-
-		// The false means read out the internal representation of the bitstream data rather than
-		// aligning it as we normally would with user data.  This is so the end user can cast the data received
-		// into a bitstream for reading
-		if ( incomingBitStream.ReadBits( ( unsigned char* ) userData, rpcParms.numberOfBitsOfData, false ) == false )
-		{
-#ifdef _DEBUG
-			assert( 0 );
-#endif
-			#if defined(_COMPATIBILITY_1)
+		if ( usedAlloca == false )
 			delete [] userData;
-			#endif
 
-			return false; // Not enough data to read
-		}
-
-//		if ( rpcParms.hasTimestamp )
-//			ShiftIncomingTimestamp( userData, playerId );
-
-		// Call the function callback
-		rpcParms.input=userData;
-		if (networkIDIsEncoded)
-		{
-			void *object = NetworkIDGenerator::GET_OBJECT_FROM_ID(networkID);
-			if (object)
-				(node->memberFunctionPointer(object, &rpcParms));
-		}
-		else
-		{
-			node->staticFunctionPointer( &rpcParms );
-		}
-
-
-		if (usedAlloca==false)
-			delete [] userData;
+		return false;
 	}
 
-	if (blockingCommand)
-	{
-		RakNet::BitStream reply;
-		reply.Write((unsigned char) ID_RPC_REPLY);
-		reply.Write((char*)replyToSender.GetData(), replyToSender.GetNumberOfBytesUsed());
-		Send(&reply, HIGH_PRIORITY, RELIABLE, 0, playerId, false);
-	}
+	rpcParms.input = userData;
+
+	// Same direct dispatch as the R5 client.
+	node->staticFunctionPointer( &rpcParms );
+
+	if ( usedAlloca == false )
+		delete [] userData;
 
 	return true;
 }
@@ -4030,7 +3729,7 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 	}
 	// We didn't check this datagram to see if it came from a connected system or not yet.
 	// Therefore, this datagram must be under 17 bits - otherwise it may be normal network traffic as the min size for a raknet send is 17 bits
-	else if ((unsigned char)(data)[0] == ID_OPEN_CONNECTION_REQUEST && length == sizeof(unsigned char)*2)
+	else if ((unsigned char)(data)[0] == ID_OPEN_CONNECTION_REQUEST && length == sizeof(unsigned char)+sizeof(unsigned short))
 	{
 		for (i=0; i < rakPeer->messageHandlerList.Size(); i++)
 			rakPeer->messageHandlerList[i]->OnDirectSocketReceive(data, length*8, playerId);
@@ -4077,11 +3776,23 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 
 	}
 
+	// for SA-MP compatibility
+	// R5 stores the cookie here; the normal connection-attempt retry path sends it.
+	else if ( (unsigned char)data[0] == ID_OPEN_CONNECTION_COOKIE && length == sizeof(unsigned char)+sizeof(unsigned short) )
+	{
+		for ( i = 0; i < rakPeer->messageHandlerList.Size(); i++ )
+			rakPeer->messageHandlerList[i]->OnDirectSocketReceive( data, length * 8, playerId );
+
+		memcpy( &sampOpenConnectionCookie, data + 1, sizeof(sampOpenConnectionCookie) );
+		return;
+	}
+
 	// See if this datagram came from a connected system
 	remoteSystem = rakPeer->GetRemoteSystemFromPlayerID( playerId, true, true );
 	if ( remoteSystem )
 	{
-		if (remoteSystem->connectMode==RakPeer::RemoteSystemStruct::SET_ENCRYPTION_ON_MULTIPLE_16_BYTE_PACKET && (length%16)==0)
+		// SA-MP 0.3.7-R5 uses an 8-byte boundary here.
+		if (remoteSystem->connectMode==RakPeer::RemoteSystemStruct::SET_ENCRYPTION_ON_MULTIPLE_16_BYTE_PACKET && (length%8)==0)
 			remoteSystem->reliabilityLayer.SetEncryptionKey( remoteSystem->AESKey );
 
 		// Handle regular incoming data
@@ -4091,7 +3802,10 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 			// These kinds of packets may have been duplicated and incorrectly determined to be
 			// cheat packets.  Anything else really is a cheat packet
 			if ( !(
-			( (unsigned char)data[0] == ID_OPEN_CONNECTION_REQUEST && length <= 2 ) ||
+			// for SA-MP compatibility
+			// open connection cookie
+			( (unsigned char)data[0] == ID_OPEN_CONNECTION_REQUEST && length <= 3 ) ||
+			( (unsigned char)data[0] == ID_OPEN_CONNECTION_COOKIE && length <= 3 ) ||
 			( (unsigned char)data[0] == ID_OPEN_CONNECTION_REPLY && length <= 2 ) ||
 			( (unsigned char)data[0] == ID_CONNECTION_ATTEMPT_FAILED && length <= 2 ) ||
 			( ((unsigned char)data[0] == ID_PING_OPEN_CONNECTIONS || (unsigned char)data[0] == ID_PING || (unsigned char)data[0] == ID_PONG) && length >= sizeof(unsigned char)+sizeof(RakNetTime) ) ||
@@ -4340,14 +4054,15 @@ bool RakPeer::RunUpdateCycle( void )
 
 			rcs->requestsMade++;
 			rcs->nextRequestTime=timeMS+1000;
-			char c[2];
+			unsigned char c[sizeof(unsigned char)+sizeof(unsigned short)];
+			unsigned short cookie = sampOpenConnectionCookie ^ SAMP_OPEN_CONNECTION_COOKIE_XOR;
 			c[0] = ID_OPEN_CONNECTION_REQUEST;
-			c[1] = 0; // Pad - apparently some routers block 1 byte packets
+			memcpy( c + 1, &cookie, sizeof(cookie) );
 
 			unsigned i;
 			for (i=0; i < messageHandlerList.Size(); i++)
-				messageHandlerList[i]->OnDirectSocketSend((char*)&c, 16, rcs->playerId);
-			SocketLayer::Instance()->SendTo( connectionSocket, (char*)&c, 2, rcs->playerId.binaryAddress, rcs->playerId.port );
+				messageHandlerList[i]->OnDirectSocketSend((char*)c, sizeof(c) * 8, rcs->playerId);
+			SocketLayer::Instance()->SendTo( connectionSocket, (char*)c, sizeof(c), rcs->playerId.binaryAddress, rcs->playerId.port );
 		}
 
 		rcs=requestedConnectionList.ReadLock();
@@ -4387,7 +4102,7 @@ bool RakPeer::RunUpdateCycle( void )
 			if (timeMS > remoteSystem->lastReliableSend && timeMS-remoteSystem->lastReliableSend > 5000 && remoteSystem->connectMode==RemoteSystemStruct::CONNECTED)
 			{
 				// If no reliable packets are waiting for an ack, do a one byte reliable send so that disconnections are noticed
-				rnss=remoteSystem->reliabilityLayer.GetStatistics();
+				rnss=remoteSystem->reliabilityLayer.GetStatistics( false );
 				if (rnss->messagesOnResendQueue==0)
 				{
 					unsigned char keepAlive=ID_DETECT_LOST_CONNECTIONS;
@@ -4683,15 +4398,10 @@ bool RakPeer::RunUpdateCycle( void )
 
 					//	AddPacketToProducer(packet);
 					}
-					else if ( (unsigned char) data[ 0 ] == ID_RPC_MAPPING )
+					else if ( (unsigned char)data[0] == ID_RPC_MAPPING )
 					{
-						RakNet::BitStream inBitStream( (unsigned char *) data, byteSize, false );
-						RPCIndex index;
-						char output[256];
-						inBitStream.IgnoreBits(8);
-						stringCompressor->DecodeString(output, 255, &inBitStream);
-						inBitStream.ReadCompressed(index);
-                        remoteSystem->rpcMap.AddIdentifierAtIndex((char*)output,index);
+						// for SA-MP compatibility
+						// numeric RPC identifiers
 						delete [] data;
 					}
 					else if ( (unsigned char) data[ 0 ] == ID_REQUEST_STATIC_DATA )
@@ -4787,7 +4497,9 @@ bool RakPeer::RunUpdateCycle( void )
 						// Do nothing
 						delete [] data;
 					}
-					else if ( (unsigned char)(data)[0] == ID_CONNECTION_REQUEST_ACCEPTED && byteSize == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex) )
+					// for SA-MP compatibility
+					// server challenge
+					else if ( (unsigned char)(data)[0] == ID_CONNECTION_REQUEST_ACCEPTED && byteSize == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex)+sizeof(unsigned int) )
 					{
 						// Make sure this connection accept is from someone we wanted to connect to
 						bool allowConnection, alreadyConnected;
@@ -4887,7 +4599,7 @@ bool RakPeer::RunUpdateCycle( void )
 					}
 					else
 					{
-						if (data[0]>=(unsigned char)ID_RPC)
+						if ((unsigned char)data[0] == ID_AUTH_KEY || data[0]>=(unsigned char)ID_RPC)
 						{
 							packet=AllocPacket(byteSize, data);
 							packet->bitSize = bitSize;
@@ -4895,9 +4607,11 @@ bool RakPeer::RunUpdateCycle( void )
 							packet->playerIndex = ( PlayerIndex ) remoteSystemIndex;
 							AddPacketToProducer(packet);					
 						}
-						//else
-							// Some internal type got returned to the user?
-							//RakAssert(0);
+						else
+						{
+							// R5 drops internal packet ids below ID_RPC that were not handled above.
+							delete [] data;
+						}
 					}
 				}
 

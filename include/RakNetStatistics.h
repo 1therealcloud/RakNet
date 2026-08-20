@@ -26,89 +26,60 @@
 /// \brief Network Statisics Usage 
 ///
 /// Store Statistics information related to network usage 
+#pragma pack(push, 1)
 struct RAK_DLL_EXPORT RakNetStatisticsStruct
 {
-	///  Number of Messages in the send Buffer (high, medium, low priority)
 	unsigned messageSendBuffer[ NUMBER_OF_PRIORITIES ];
-	///  Number of messages sent (high, medium, low priority)
 	unsigned messagesSent[ NUMBER_OF_PRIORITIES ];
-	///  Number of data bits used for user messages
-	unsigned messageDataBitsSent[ NUMBER_OF_PRIORITIES ];
-	///  Number of total bits used for user messages, including headers
-	unsigned messageTotalBitsSent[ NUMBER_OF_PRIORITIES ];
-	
-	///  Number of packets sent containing only acknowledgements
+
+	// Present in SA-MP 0.3.7-R5.  These 16 bytes sit between the two
+	// 32-bit priority arrays and the 64-bit bit counters.
+	unsigned char sampR5Pad20[16];
+
+	unsigned long long messageDataBitsSent[ NUMBER_OF_PRIORITIES ];
+	unsigned long long messageTotalBitsSent[ NUMBER_OF_PRIORITIES ];
+
 	unsigned packetsContainingOnlyAcknowlegements;
-	///  Number of acknowledgements sent
 	unsigned acknowlegementsSent;
-	///  Number of acknowledgements waiting to be sent
 	unsigned acknowlegementsPending;
-	///  Number of acknowledgements bits sent
-	unsigned acknowlegementBitsSent;
-	
-	///  Number of packets containing only acknowledgements and resends
+	unsigned long long acknowlegementBitsSent;
 	unsigned packetsContainingOnlyAcknowlegementsAndResends;
-	
-	///  Number of messages resent
 	unsigned messageResends;
-	///  Number of bits resent of actual data
-	unsigned messageDataBitsResent;
-	///  Total number of bits resent, including headers
-	unsigned messagesTotalBitsResent;
-	///  Number of messages waiting for ack (// TODO - rename this)
+	unsigned long long messageDataBitsResent;
+	unsigned long long messagesTotalBitsResent;
 	unsigned messagesOnResendQueue;
-	
-	///  Number of messages not split for sending
 	unsigned numberOfUnsplitMessages;
-	///  Number of messages split for sending
 	unsigned numberOfSplitMessages;
-	///  Total number of splits done for sending
 	unsigned totalSplits;
-	
-	///  Total packets sent
 	unsigned packetsSent;
-	
-	///  Number of bits added by encryption
-	unsigned encryptionBitsSent;
-	///  total bits sent
-	unsigned totalBitsSent;
-	
-	///  Number of sequenced messages arrived out of order
+	unsigned long long encryptionBitsSent;
+	unsigned long long totalBitsSent;
 	unsigned sequencedMessagesOutOfOrder;
-	///  Number of sequenced messages arrived in order
 	unsigned sequencedMessagesInOrder;
-	
-	///  Number of ordered messages arrived out of order
 	unsigned orderedMessagesOutOfOrder;
-	///  Number of ordered messages arrived in order
 	unsigned orderedMessagesInOrder;
-	
-	///  Packets with a good CRC received
 	unsigned packetsReceived;
-	///  Packets with a bad CRC received
 	unsigned packetsWithBadCRCReceived;
-	///  Bits with a good CRC received
-	unsigned bitsReceived;
-	///  Bits with a bad CRC received
-	unsigned bitsWithBadCRCReceived;
-	///  Number of acknowledgement messages received for packets we are resending
+	unsigned long long bitsReceived;
+	unsigned long long bitsWithBadCRCReceived;
 	unsigned acknowlegementsReceived;
-	///  Number of acknowledgement messages received for packets we are not resending
 	unsigned duplicateAcknowlegementsReceived;
-	///  Number of data messages (anything other than an ack) received that are valid and not duplicate
 	unsigned messagesReceived;
-	///  Number of data messages (anything other than an ack) received that are invalid
 	unsigned invalidMessagesReceived;
-	///  Number of data messages (anything other than an ack) received that are duplicate
 	unsigned duplicateMessagesReceived;
-	///  Number of messages waiting for reassembly
 	unsigned messagesWaitingForReassembly;
-	///  Number of messages in reliability output queue
 	unsigned internalOutputQueueSize;
-	///  Current bits per second
 	double bitsPerSecond;
-	///  connection start time
 	RakNetTime connectionStartTime;
+
+	// R5-private statistics state.  Names are intentionally neutral until
+	// their exact public meaning is needed; offsets are +0x110..+0x124.
+	RakNetTime field_110;
+	unsigned field_114;
+	unsigned field_118;
+	RakNetTime field_11C;
+	unsigned field_120;
+	unsigned field_124;
 
 	RakNetStatisticsStruct operator +=(const RakNetStatisticsStruct& other)
 	{
@@ -122,7 +93,7 @@ struct RAK_DLL_EXPORT RakNetStatisticsStruct
 		}
 
 		packetsContainingOnlyAcknowlegements+=other.packetsContainingOnlyAcknowlegements;
-		acknowlegementsSent+=other.packetsContainingOnlyAcknowlegements;
+		acknowlegementsSent+=other.acknowlegementsSent;
 		acknowlegementsPending+=other.acknowlegementsPending;
 		acknowlegementBitsSent+=other.acknowlegementBitsSent;
 		packetsContainingOnlyAcknowlegementsAndResends+=other.packetsContainingOnlyAcknowlegementsAndResends;
@@ -155,6 +126,7 @@ struct RAK_DLL_EXPORT RakNetStatisticsStruct
 		return *this;
 	}
 };
+#pragma pack(pop)
 
 /// Verbosity level currently supports 0 (low), 1 (medium), 2 (high)
 /// \param[in] s The Statistical information to format out

@@ -67,6 +67,9 @@ namespace RakNet
 		/// \param[in] lengthInBytes Size of the \a _data.
 		/// \param[in] _copyData true or false to make a copy of \a _data or not.
 		BitStream( unsigned char* _data, unsigned int lengthInBytes, bool _copyData );
+
+		// SA:MP R5 compatibility overload.
+		BitStream( char* _dataC, unsigned int lengthInBytes, bool _copyData );
 		
 		/// Destructor 
 		~BitStream();
@@ -572,7 +575,10 @@ namespace RakNet
 		template <>
 			bool ReadCompressedDelta(bool &var);
 #endif
-	private:
+	public:
+		// Exposed by the SA:MP R5 compatibility bridge. These are out-of-line
+		// RakNet entrypoints embedded in samp.dll and must be redirectable to
+		// this local implementation.
 		/// Assume the input source points to a native type, compress and write it.
 		void WriteCompressed( const unsigned char* input,	const int size, const bool unsignedData );
 		
@@ -582,7 +588,8 @@ namespace RakNet
 		void ReverseBytes(unsigned char *input, unsigned char *output, int length);
 
 		bool DoEndianSwap(void) const;
-		
+
+	private:
 		int numberOfBitsUsed;
 		
 		int numberOfBitsAllocated;
@@ -1294,7 +1301,9 @@ namespace RakNet
 			y=0.0;
 		else
 		{
-			ReadCompressed((float)cy);
+			// for SA-MP compatibility
+			// MinGW build fix
+			ReadCompressed(cy);
 			y=cy;
 			//Read(sy);
 			//y=((float)sy / 32767.5f - 1.0f);
@@ -1311,7 +1320,7 @@ namespace RakNet
 			//		return false;
 
 			//	z=((float)sz / 32767.5f - 1.0f);
-			if (!ReadCompressed((float)cz))
+			if (!ReadCompressed(cz))
 				return false;
 			z=cz;
 		}

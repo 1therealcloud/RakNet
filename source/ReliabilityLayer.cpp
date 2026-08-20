@@ -34,8 +34,8 @@
 
 static const int DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE=512;
 static const float PACKETLOSS_TOLERANCE=.02f; // What percentile packetloss we are willing to accept as background noise.
-static const double MINIMUM_SEND_BPS=14400.0; // Won't go below this send rate
-static const double STARTING_SEND_BPS=28800.0; // What send rate to start at.
+static const double MINIMUM_SEND_BPS=144400.0; // Won't go below this send rate
+static const double STARTING_SEND_BPS=512000.0; // What send rate to start at.
 static const float PING_MULTIPLIER_TO_RESEND=3.0; // So internet ping variation doesn't cause needless resends
 static const RakNetTime MIN_PING_TO_RESEND=30; // So system timer changes and CPU lag don't send needless resends
 static const RakNetTimeNS TIME_TO_NEW_SAMPLE=500000; // How many ns to wait before starting a new sample.  This way buffers have time to overflow or relax at the new send rate, if they are indeed going to overflow.
@@ -183,6 +183,13 @@ void ReliabilityLayer::InitializeVariables( void )
 	memset( waitingForSequencedPacketWriteIndex, 0, NUMBER_OF_ORDERED_STREAMS * sizeof(OrderingIndexType) );
 	memset( &statistics, 0, sizeof( statistics ) );
 	statistics.connectionStartTime = RakNet::GetTime();
+	statistics.field_110 = RakNet::GetTime();
+	statistics.field_114 = 0;
+	statistics.field_118 = 0;
+	statistics.field_11C = RakNet::GetTime();
+	statistics.field_120 = 0;
+	statistics.field_124 = 0;
+	reliabilitySizeInBits = 4;
 	splitPacketId = 0;
 	messageNumber = 0;
 	availableBandwidth=0;
@@ -890,7 +897,7 @@ bool ReliabilityLayer::Send( char *data, int numberOfBitsToSend, PacketPriority 
 	int maxDataSize = MTUSize - UDP_HEADER_SIZE - headerLength;
 
 	if ( encryptor.IsKeySet() )
-		maxDataSize -= 16; // Extra data for the encryptor
+		maxDataSize -= 8; // SA-MP R5 TEA encryptor works in 8-byte blocks
 
 	bool splitPacket = numberOfBytesToSend > maxDataSize;
 
@@ -1244,7 +1251,7 @@ unsigned ReliabilityLayer::GenerateDatagram( RakNet::BitStream *output, int MTUS
 	maxDataBitSize = MTUSize - UDP_HEADER_SIZE;
 
 	if ( encryptor.IsKeySet() )
-		maxDataBitSize -= 16; // Extra data for the encryptor
+		maxDataBitSize -= 8; // SA-MP R5 TEA encryptor works in 8-byte blocks
 
 	maxDataBitSize <<= 3;
 
@@ -1608,9 +1615,11 @@ int ReliabilityLayer::GetBitStreamHeaderLength( const InternalPacket *const inte
 
 	bitLength=sizeof(MessageNumberType)*2*8;
 
-	// Write the PacketReliability.  This is encoded in 3 bits
-	//bitStream->WriteBits((unsigned char*)&(internalPacket->reliability), 3, true);
-	bitLength += 3;
+	// for SA-MP compatibility
+	// 4-bit reliability field
+	// Write the PacketReliability.  This is encoded in 4 bits
+	//bitStream->WriteBits((unsigned char*)&(internalPacket->reliability), 4, true);
+	bitLength += reliabilitySizeInBits;
 
 	// If the reliability requires an ordering channel and ordering index, we Write those.
 	if ( internalPacket->reliability == UNRELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_ORDERED )
@@ -1683,8 +1692,10 @@ int ReliabilityLayer::WriteToBitStreamFromInternalPacket( RakNet::BitStream *bit
 	assert( internalPacket->dataBitLength > 0 );
 #endif
 
-	// Write the PacketReliability.  This is encoded in 3 bits
-	bitStream->WriteBits( (const unsigned char *)&c, 3, true );
+	// for SA-MP compatibility
+	// 4-bit reliability field
+	// Write the PacketReliability.  This is encoded in 4 bits
+	bitStream->WriteBits( (const unsigned char *)&c, reliabilitySizeInBits, true );
 
 	// If the reliability requires an ordering channel and ordering index, we Write those.
 	if ( internalPacket->reliability == UNRELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_ORDERED )
@@ -1773,10 +1784,12 @@ InternalPacket* ReliabilityLayer::CreateInternalPacketFromBitStream( RakNet::Bit
 		return 0;
 	}
 
-	// Read the PacketReliability. This is encoded in 3 bits
+	// for SA-MP compatibility
+	// 4-bit reliability field
+	// Read the PacketReliability. This is encoded in 4 bits
 	unsigned char reliability;
 
-	bitStreamSucceeded = bitStream->ReadBits( ( unsigned char* ) ( &( reliability ) ), 3 );
+	bitStreamSucceeded = bitStream->ReadBits( ( unsigned char* ) ( &( reliability ) ), reliabilitySizeInBits );
 
 	internalPacket->reliability = ( const PacketReliability ) reliability;
 
@@ -1785,7 +1798,8 @@ InternalPacket* ReliabilityLayer::CreateInternalPacketFromBitStream( RakNet::Bit
 	// assert( bitStreamSucceeded );
 #endif
 
-	if ( bitStreamSucceeded == false )
+	// SA-MP 0.3.7-R5 rejects the pre-SA-MP reliability values 0..5.
+	if ( reliability < UNRELIABLE || bitStreamSucceeded == false )
 	{
 		internalPacketPool.ReleasePointer( internalPacket );
 		return 0;
@@ -2071,7 +2085,7 @@ void ReliabilityLayer::SplitPacket( InternalPacket *internalPacket, int MTUSize 
 	maxDataSize = MTUSize - UDP_HEADER_SIZE;
 
 	if ( encryptor.IsKeySet() )
-		maxDataSize -= 16; // Extra data for the encryptor
+		maxDataSize -= 8; // SA-MP R5 TEA encryptor works in 8-byte blocks
 
 #ifdef _DEBUG
 	// Make sure we need to split the packet to begin with
@@ -2464,7 +2478,7 @@ void ReliabilityLayer::UpdateNextActionTime(void)
 //-------------------------------------------------------------------------------------------------------
 // Statistics
 //-------------------------------------------------------------------------------------------------------
-RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( void )
+RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( bool includeResendListDataSize )
 {
 	unsigned i;
 
@@ -2482,7 +2496,10 @@ RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( void )
 	statistics.bitsPerSecond = currentBandwidth;
 	//statistics.lossySize = lossyWindowSize == MAXIMUM_WINDOW_SIZE + 1 ? 0 : lossyWindowSize;
 //	statistics.lossySize=0;
-	statistics.messagesOnResendQueue = GetResendListDataSize();
+	if (!includeResendListDataSize)
+		statistics.messagesOnResendQueue = GetResendListDataSize();
+	else
+		statistics.messagesOnResendQueue = 0;
 
 	return &statistics;
 }

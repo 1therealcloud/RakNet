@@ -25,37 +25,29 @@
 
 class RakPeerInterface;
 
+/// \defgroup RAKNET_RPC Remote Procedure Call Subsystem
+/// \brief A system to call C or object member procedures on remote systems.
 
-/// \defgroup RAKNET_RPC Remote Procedure Call Subsystem 
-/// \brief A system to call C or object member procudures on other systems, and even to return return values.
-
-/// \ingroup RAKNET_RPC 
-/// \internal
-/// 
-/// \brief Map registered procedure inside of a peer.  
-/// 
+/// SA-MP 0.3.7-R5 stores this node packed as:
+/// byte rpcId, pointer function, byte isMember (6 bytes in the 32-bit client).
+#pragma pack(push, 1)
 struct RAK_DLL_EXPORT RPCNode
 {
- 
- 	/// String identifier of the RPC
-	char *uniqueIdentifier;
-	
- /// Force casting of member functions to void *
-	union
-	{
-		void ( *staticFunctionPointer ) ( RPCParameters *rpcParms );
-		#if (defined(__GNUC__)  || defined(__GCCXML__))
-  		void (*memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
-		#else
-		void (__cdecl *memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
-		#endif
+    unsigned char uniqueIdentifier;
 
-		void *functionPointer;
-	};
-	
-	/// Is this a member function pointer?  True if so.  If false it's a regular C function.
-	bool isPointerToMember;
+    union
+    {
+        void ( *staticFunctionPointer ) ( RPCParameters *rpcParms );
+#if (defined(__GNUC__) || defined(__GCCXML__))
+        void (*memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
+#else
+        void (__cdecl *memberFunctionPointer)(void* _this, RPCParameters *rpcParms);
+#endif
+        void *functionPointer;
+    };
+
+    bool isPointerToMember;
 };
+#pragma pack(pop)
 
 #endif
-

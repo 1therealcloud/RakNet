@@ -30,15 +30,12 @@
 /// \li \em 1430. The size VPN and PPTP prefer.
 /// \li \em 1400. Maximum size for AOL DSL.
 /// \li \em 576. Typical value to connect to dial-up ISPs.
-#ifdef _COMPATIBILITY_1
-#define DEFAULT_MTU_SIZE 1264
-#else
-#define DEFAULT_MTU_SIZE 1500
-#endif
+// SA-MP 0.3.7-R5 default.
+#define DEFAULT_MTU_SIZE 576
 
 /// The largest value for an UDP datagram
 /// \sa RakPeer::SetMTUSize()
-#define MAXIMUM_MTU_SIZE 1500
+#define MAXIMUM_MTU_SIZE 1492
 
 #endif
 

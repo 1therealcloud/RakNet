@@ -21,13 +21,15 @@
 #define __RPC_MAP
 
 #include "RPCNode.h"
-#include "DS_List.h"
 #include "NetworkTypes.h"
 #include "Export.h"
 
 /// \ingroup RAKNET_RPC 
 /// \internal
-/// \brief A container class for a list of RPCNodes
+/// \brief SA-MP 0.3.7-R5 RPC dispatch table.
+///
+/// R5 indexes RPC handlers directly by the one-byte RPC id.  There is no
+/// string/name map and no registration-order remapping.
 struct RAK_DLL_EXPORT RPCMap
 {
 public:
@@ -41,7 +43,7 @@ public:
 	void AddIdentifierAtIndex(char *uniqueIdentifier, RPCIndex insertionIndex);
 	void RemoveNode(char *uniqueIdentifier);
 protected:
-	DataStructures::List<RPCNode *> rpcSet;
+	RPCNode *rpcSet[256];
 };
 
 #endif
