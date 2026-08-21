@@ -202,6 +202,5 @@ bool DataBlockEncryptor::Decrypt( unsigned char *input, int inputLength, unsigne
 	else
 		memcpy( output, input + sizeof( randomChar ) + sizeof( checkSum ) + sizeof( encodedPad ) + paddingBytes, *outputLength );
 
-
 	return true;
 }

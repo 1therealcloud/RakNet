@@ -27,14 +27,6 @@
 #include <arpa/inet.h>
 #endif
 
-// Was included for memset which now comes from string.h instead
-/*
-#if defined ( __APPLE__ ) || defined ( __APPLE_CC__ )
-	#include <malloc/malloc.h>
-#endif
-
-	*/
-
 // MSWin uses _copysign, others use copysign...
 #ifndef _WIN32
 #define _copysign copysign
@@ -720,49 +712,6 @@ void BitStream::SetWriteOffset( const int offset )
 	numberOfBitsUsed = offset;
 }
 
-/*
-int BitStream::GetWriteOffset( void ) const
-{
-	return numberOfBitsUsed;
-}
-
-// Returns the length in bits of the stream
-int BitStream::GetNumberOfBitsUsed( void ) const
-{
-	return GetWriteOffset();
-}
-
-// Returns the length in bytes of the stream
-int BitStream::GetNumberOfBytesUsed( void ) const
-{
-	return BITS_TO_BYTES( numberOfBitsUsed );
-}
-
-// Returns the number of bits into the stream that we have read
-int BitStream::GetReadOffset( void ) const
-{
-	return readOffset;
-}
-
-
-// Sets the read bit index
-void BitStream::SetReadOffset( int newReadOffset )
-{
-	readOffset=newReadOffset;
-}
-
-// Returns the number of bits left in the stream that haven't been read
-int BitStream::GetNumberOfUnreadBits( void ) const
-{
-	return numberOfBitsUsed - readOffset;
-}
-// Exposes the internal data
-unsigned char* BitStream::GetData( void ) const
-{
-	return data;
-}
-
-*/
 // If we used the constructor version with copy data off, this makes sure it is set to on and the data pointed to is copied.
 void BitStream::AssertCopyData( void )
 {
