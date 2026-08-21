@@ -255,16 +255,18 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 
 #ifdef _WIN32
 	unsigned long nonblocking = 1;
-// http://www.die.net/doc/linux/man/man7/ip.7.html
+	// http://www.die.net/doc/linux/man/man7/ip.7.html
 	if ( ioctlsocket( listenSocket, FIONBIO, &nonblocking ) != 0 )
 	{
 		assert( 0 );
+		closesocket( listenSocket );
 		return INVALID_SOCKET;
 	}
 #else
 	if ( fcntl( listenSocket, F_SETFL, O_NONBLOCK ) != 0 )
 	{
 		assert( 0 );
+		close( listenSocket );
 		return INVALID_SOCKET;
 	}
 #endif
@@ -318,6 +320,12 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 		LocalFree( messageBuffer );
 #endif
 
+#ifdef _WIN32
+		closesocket( listenSocket );
+#else
+		close( listenSocket );
+#endif
+
 		return INVALID_SOCKET;
 	}
 
@@ -360,7 +368,7 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 	char data[ MAXIMUM_MTU_SIZE ];
 	sockaddr_in sa;
 
-	const socklen_t len2 = sizeof( struct sockaddr_in );
+	socklen_t len2 = sizeof( struct sockaddr_in );
 	sa.sin_family = AF_INET;
 
 #ifdef _DEBUG
@@ -375,7 +383,7 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 		return SOCKET_ERROR;
 	}
 
-	len = recvfrom( s, data, MAXIMUM_MTU_SIZE, 0, ( sockaddr* ) & sa, ( socklen_t* ) & len2 );
+	len = recvfrom( s, data, MAXIMUM_MTU_SIZE, 0, ( sockaddr* ) & sa, &len2 );
 
 	// if (len>0)
 	//  printf("Got packet on port %i\n",ntohs(sa.sin_port));

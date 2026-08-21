@@ -977,7 +977,7 @@ void RakPeer::DeallocatePacket( Packet *packet )
 		return;
 
 	if (packet->deleteData)
-		delete packet->data;
+		delete [] packet->data;
 	free(packet);
 }
 
@@ -1343,8 +1343,8 @@ void RakPeer::ClearBanList( void )
 
 	for ( ; index < banList.Size(); index++ )
 	{
-		delete [] banList[ index ]->IP;
-		delete [] banList[ index ];
+		delete [] banList[index]->IP;
+		delete banList[index];
 	}
 
 	banList.Clear();
@@ -3757,7 +3757,7 @@ bool RakPeer::RunUpdateCycle( void )
 
 			callerDataAllocationUsed=SendImmediate((char*)bcs->data, bcs->numberOfBitsToSend, bcs->priority, bcs->reliability, bcs->orderingChannel, bcs->playerId, bcs->broadcast, true, timeNS);
 			if ( callerDataAllocationUsed==false )
-				delete bcs->data;
+				delete [] bcs->data;
 
 			// Set the new connection state AFTER we call sendImmediate in case we are setting it to a disconnection state, which does not allow further sends
 			if (bcs->connectionMode!=RemoteSystemStruct::NO_ACTION && bcs->playerId!=UNASSIGNED_PLAYER_ID)

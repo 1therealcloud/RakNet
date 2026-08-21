@@ -82,6 +82,11 @@ namespace DataStructures
 	private:
 		struct DataPlusPtr
 		{
+			// Initialize synchronization state
+			DataPlusPtr() : readyToRead( false ), next( 0 )
+			{
+			}
+
 			SingleProducerConsumerType object;
 
 			// Ready to read is so we can use an equality boolean comparison, in case the writePointer var is trashed while context switching.
@@ -126,10 +131,10 @@ namespace DataStructures
 		while (readPointer!=writeAheadPointer)
 		{
 			next=readPointer->next;
-			delete (char*) readPointer;
+			delete readPointer;
 			readPointer=next;
 		}
-		delete (char*) readPointer;
+		delete readPointer;
 	}
 
 	template <class SingleProducerConsumerType>
@@ -232,7 +237,7 @@ namespace DataStructures
 #ifdef _DEBUG
 			assert(writePointer!=readPointer);
 #endif
-			delete (char*) writePointer;
+			delete writePointer;
 			writePointer=next;
 		}
 

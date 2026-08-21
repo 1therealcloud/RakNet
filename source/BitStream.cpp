@@ -628,21 +628,31 @@ void BitStream::AddBitsAndReallocate( const int numberOfBitsToWrite )
 		{
 			 if (amountToAllocate > BITSTREAM_STACK_ALLOCATION_SIZE)
 			 {
-				 data = ( unsigned char* ) malloc( amountToAllocate );
+				unsigned char *newData = ( unsigned char* ) malloc( amountToAllocate );
+
+				 if ( newData == 0 )
+				 {
+					 assert( 0 );
+					 abort();
+				 }
 
 				 // need to copy the stack data over to our new memory area too
-				 memcpy ((void *)data, (void *)stackData, BITS_TO_BYTES( numberOfBitsAllocated )); 
+				 memcpy( (void *)newData, (void *)stackData, BITS_TO_BYTES( numberOfBitsAllocated ) );
+				 data = newData;
 			 }
 		}
 		else
 		{
-			data = ( unsigned char* ) realloc( data, amountToAllocate );
-		}
+			unsigned char *newData = ( unsigned char* ) realloc( data, amountToAllocate );
 
-#ifdef _DEBUG
-		assert( data ); // Make sure realloc succeeded
-#endif
-		//  memset(data+newByteOffset, 0,  ((newNumberOfBitsAllocated-1)>>3) - ((numberOfBitsAllocated-1)>>3)); // Set the new data block to 0
+			if ( newData == 0 )
+			{
+				assert( 0 );
+				abort();
+			}
+
+			data = newData;
+		}
 	}
 	
 	if ( newNumberOfBitsAllocated > numberOfBitsAllocated )
@@ -723,10 +733,8 @@ void BitStream::AssertCopyData( void )
 		{
 			unsigned char * newdata = ( unsigned char* ) malloc( BITS_TO_BYTES( numberOfBitsAllocated ) );
 #ifdef _DEBUG
-			
-			assert( data );
+			assert( newdata );
 #endif
-			
 			memcpy( newdata, data, BITS_TO_BYTES( numberOfBitsAllocated ) );
 			data = newdata;
 		}

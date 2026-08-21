@@ -231,6 +231,9 @@ namespace DataStructures
 
 		if ( original_copy.Size() == 0 )
 		{
+			array = 0;
+			head = 0;
+			tail = 0;
 			allocation_size = 0;
 		}
 
@@ -255,13 +258,17 @@ namespace DataStructures
 		if ( ( &original_copy ) == this )
 			return false;
 
-		Clear();
+		if ( allocation_size > 0 )
+			delete [] array;
+
+		array = 0;
+		head = 0;
+		tail = 0;
+		allocation_size = 0;
 
 		// Allocate memory for copy
 		if ( original_copy.Size() == 0 )
-		{
-			allocation_size = 0;
-		}
+			return true;
 
 		else
 		{

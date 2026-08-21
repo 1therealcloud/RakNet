@@ -107,7 +107,7 @@ bool TEABlockEncryptor::Decrypt(unsigned char* input, int inputLength, unsigned 
     assert(keySet);
 #endif
 
-    if (input == 0 || inputLength < 8 || (inputLength % 8) != 0)
+    if (input == 0 || output == 0 || outputLength == 0 || inputLength < 8 || (inputLength % 8) != 0)
         return false;
 
     for (int i = 0; i < inputLength; i += 8)
@@ -117,9 +117,14 @@ bool TEABlockEncryptor::Decrypt(unsigned char* input, int inputLength, unsigned 
         DecryptBlock(V0, V1);
     }
 
-    checkSum = *output;
-    encodedPad = *(output + sizeof(checkSum));
+    checkSum = *input;
+    encodedPad = *(input + sizeof(checkSum));
     paddingBytes = encodedPad & 0x0F;
+
+    if (paddingBytes > 7 ||
+        inputLength < (int)(sizeof(checkSum) + sizeof(encodedPad) + paddingBytes))
+        return false;
+
     *outputLength = inputLength - sizeof(checkSum) - sizeof(encodedPad) - paddingBytes;
 
     checkSumCalculator.Add(input + sizeof(checkSum), *outputLength + sizeof(encodedPad) + paddingBytes);

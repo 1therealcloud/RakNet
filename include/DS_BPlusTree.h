@@ -177,7 +177,7 @@ namespace DataStructures
 			if (root->size==0)
 			{
 				pagePool.Release(root);
-				memset(root,0,sizeof(root));
+				memset(root,0,sizeof(*root));
 				root=0;
 				leftmostLeaf=0;
 			}
@@ -194,7 +194,7 @@ namespace DataStructures
 			Page<KeyType, DataType, order> *oldRoot=root;
 			root=root->children[0];
 			pagePool.Release(oldRoot);
-			memset(oldRoot,0,sizeof(root));
+			memset(oldRoot,0,sizeof(*oldRoot));
 		}		
 	
 		return true;
@@ -448,7 +448,7 @@ namespace DataStructures
 
 			// Free the source node
 			pagePool.Release(source);
-			memset(source,0,sizeof(root));
+			memset(source,0,sizeof(*source));
 
 			// Return underflow or not of parent.
 			return cur->size < order/2;
@@ -939,7 +939,7 @@ namespace DataStructures
 					queue.Push(ptr->children[i]);
 			}			
 			pagePool.Release(ptr);
-			memset(ptr,0,sizeof(root));
+			memset(ptr,0,sizeof(*ptr));
 		};
 	}
 	template<class KeyType, class DataType, int order>

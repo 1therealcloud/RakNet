@@ -761,7 +761,7 @@ bool ReliabilityLayer::Send( char *data, int numberOfBitsToSend, PacketPriority 
 {
 #ifdef _DEBUG
 	assert( !( reliability > RELIABLE_SEQUENCED || reliability < 0 ) );
-	assert( !( priority > NUMBER_OF_PRIORITIES || priority < 0 ) );
+	assert( !( priority >= NUMBER_OF_PRIORITIES || priority < 0 ) );
 	assert( !( orderingChannel < 0 || orderingChannel >= NUMBER_OF_ORDERED_STREAMS ) );
 	assert( numberOfBitsToSend > 0 );
 #endif
@@ -770,7 +770,7 @@ bool ReliabilityLayer::Send( char *data, int numberOfBitsToSend, PacketPriority 
 	if ( reliability > RELIABLE_SEQUENCED || reliability < 0 )
 		reliability = RELIABLE;
 
-	if ( priority > NUMBER_OF_PRIORITIES || priority < 0 )
+	if ( priority >= NUMBER_OF_PRIORITIES || priority < 0 )
 		priority = HIGH_PRIORITY;
 
 	if ( orderingChannel >= NUMBER_OF_ORDERED_STREAMS )

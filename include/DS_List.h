@@ -131,6 +131,7 @@ namespace DataStructures
 
 		if ( original_copy.list_size == 0 )
 		{
+			listArray = 0;
 			list_size = 0;
 			allocation_size = 0;
 		}
@@ -153,7 +154,12 @@ namespace DataStructures
 	{
 		if ( ( &original_copy ) != this )
 		{
-			Clear();
+			if ( allocation_size > 0 )
+				delete [] listArray;
+
+			listArray = 0;
+			list_size = 0;
+			allocation_size = 0;
 
 			// Allocate memory for copy
 
