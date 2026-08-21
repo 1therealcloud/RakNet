@@ -2468,7 +2468,10 @@ void RakPeer::NotifyAndFlagForDisconnect( const PlayerID playerId, bool performI
 	{
 		SendImmediate((char*)temp.GetData(), temp.GetNumberOfBitsUsed(), LOW_PRIORITY, RELIABLE_ORDERED, orderingChannel, playerId, false, false, RakNet::GetTime());
 		RemoteSystemStruct *rss=GetRemoteSystemFromPlayerID(playerId, true, true);
-		rss->connectMode=RemoteSystemStruct::DISCONNECT_ASAP;
+		if (rss)
+		{
+			rss->connectMode=RemoteSystemStruct::DISCONNECT_ASAP;
+		}
 	}
 	else
 	{

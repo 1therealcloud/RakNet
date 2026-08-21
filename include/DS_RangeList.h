@@ -10,7 +10,7 @@ namespace DataStructures
     template <class range_type>
     struct RangeNode
     {
-        RangeNode() {}
+        RangeNode() : minIndex(0), maxIndex(0) {}
         ~RangeNode() {}
         RangeNode(range_type min, range_type max) {minIndex=min; maxIndex=max;}
         range_type minIndex;
@@ -23,9 +23,9 @@ namespace DataStructures
     {
         if (a<b.minIndex)
             return -1;
-        if (a==b.minIndex)
-            return 0;
-        return 1;
+        if (a>b.maxIndex)
+            return 1;
+        return 0;
     }
 
 	template <class range_type>
@@ -207,7 +207,7 @@ namespace DataStructures
 	template <class range_type>
 	unsigned RangeList<range_type>::RangeSum(void)
 	{
-		unsigned sum,i;
+		unsigned sum=0,i;
 		for (i=0; i < ranges.Size(); i++)
 			sum+=ranges[i].maxIndex-ranges[i].minIndex+1;
         return sum;
