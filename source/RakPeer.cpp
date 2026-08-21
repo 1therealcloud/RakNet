@@ -33,6 +33,9 @@
 #include "DS_HuffmanEncodingTree.h"
 #include "Rand.h"
 #include "PluginInterface.h"
+#include "StringCompressor.h"
+#include "StringTable.h"
+#include "NetworkIDGenerator.h"
 #include "NetworkTypes.h"
 #include "SHA1.h"
 #include "RakSleep.h"
@@ -137,6 +140,9 @@ Packet *AllocPacket(unsigned dataSize, unsigned char *data)
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 RakPeer::RakPeer()
 {
+	StringCompressor::AddReference();
+	StringTable::AddReference();
+
 	memset( frequencyTable, 0, sizeof( unsigned int ) * 256 );
 	rawBytesSent = rawBytesReceived = compressedBytesSent = compressedBytesReceived = 0;
 	outputTree = inputTree = 0;
@@ -184,6 +190,9 @@ RakPeer::~RakPeer()
 	ClearBanList();
 
 	Disconnect( 0, 0);
+
+	StringCompressor::RemoveReference();
+	StringTable::RemoveReference();
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
