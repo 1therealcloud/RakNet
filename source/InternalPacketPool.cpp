@@ -57,9 +57,7 @@ void InternalPacketPool::ReleasePointer( InternalPacket *p )
 		return ;
 	}
 	
-#ifdef _DEBUG
 	p->data=0;
-#endif
 	//poolMutex.Lock();
 	pool.Push( p );
 	//poolMutex.Unlock();
