@@ -36,15 +36,6 @@ void InternalPacketPool::ClearPool( void )
 	while ( pool.Size() )
 		delete pool.Pop();
 }
-/*
-InternalPacket* InternalPacketPool::GetPointer( void )
-{
-	if ( pool.Size() )
-		return pool.Pop();
-	return new InternalPacket;
-
-}
-*/
 
 void InternalPacketPool::ReleasePointer( InternalPacket *p )
 {
@@ -58,8 +49,6 @@ void InternalPacketPool::ReleasePointer( InternalPacket *p )
 	}
 	
 	p->data=0;
-	//poolMutex.Lock();
 	pool.Push( p );
-	//poolMutex.Unlock();
 }
 

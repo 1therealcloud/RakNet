@@ -285,7 +285,6 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 		//Free the buffer.
 		LocalFree( messageBuffer );
 #endif
-
 	}
 
 	// Listen on our designated Port#
@@ -338,7 +337,6 @@ const char* SocketLayer::DomainNameToIP( const char *domainName )
 
 	if ( phe == 0 || phe->h_addr_list[ 0 ] == 0 )
 	{
-		//cerr << "Yow! Bad host lookup." << endl;
 		return 0;
 	}
 
@@ -385,9 +383,6 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 
 	len = recvfrom( s, data, MAXIMUM_MTU_SIZE, 0, ( sockaddr* ) & sa, &len2 );
 
-	// if (len>0)
-	//  printf("Got packet on port %i\n",ntohs(sa.sin_port));
-
 	if ( len == 0 )
 		return 1;
 
@@ -395,9 +390,6 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 	{
 		unsigned short portnum;
 		portnum = ntohs( sa.sin_port );
-		//strcpy(ip, inet_ntoa(sa.sin_addr));
-		//if (strcmp(ip, "0.0.0.0")==0)
-		// strcpy(ip, "127.0.0.1");
 		ProcessNetworkPacket( sa.sin_addr.s_addr, portnum, data, len, rakPeer );
 
 		return 1;
@@ -512,9 +504,7 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, unsigned int bi
 		//Free the buffer.
 		LocalFree( messageBuffer );
 #endif
-
 	}
-
 	return dwIOError;
 #endif
 
@@ -571,11 +561,9 @@ void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 
 	for ( int i = 0; phe->h_addr_list[ i ] != 0 && i < 10; ++i )
 	{
-
 		struct in_addr addr;
 
 		memcpy( &addr, phe->h_addr_list[ i ], sizeof( struct in_addr ) );
-		//cout << "Address " << i << ": " << inet_ntoa(addr) << endl;
 		strcpy( ipList[ i ], inet_ntoa( addr ) );
 	}
 }
@@ -588,7 +576,6 @@ unsigned short SocketLayer::GetLocalPort ( SOCKET s )
 		return 0;
 	return ntohs(sa.sin_port);
 }
-
 
 #ifdef _MSC_VER
 #pragma warning( pop )

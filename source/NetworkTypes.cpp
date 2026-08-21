@@ -40,8 +40,6 @@ char* my_itoa( int value, char* result, int base ) {
 	int absQModB;
 
 	do {
-		// KevinJ - get rid of this dependency
-		//*out = "0123456789abcdef"[ std::abs( quotient % base ) ];
 		absQModB=quotient % base;
 		if (absQModB < 0)
 			absQModB=-absQModB;
@@ -53,8 +51,6 @@ char* my_itoa( int value, char* result, int base ) {
 	// Only apply negative sign for base 10
 	if ( value < 0 && base == 10) *out++ = '-';
 
-	// KevinJ - get rid of this dependency
-	// std::reverse( result, out );
 	*out = 0;
 
 	// KevinJ - My own reverse code

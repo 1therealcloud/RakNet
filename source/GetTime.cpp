@@ -35,14 +35,9 @@ RakNetTime RakNet::GetTime( void )
 	{
 #ifdef _WIN32
 		QueryPerformanceFrequency( &yo );
-		// The original code shifted right 10 bits
-		//counts = yo.QuadPart >> 10;
-		// It gives the wrong value since 2^10 is not 1000
-	//	counts = yo.QuadPart;// / 1000;
 #else
 		gettimeofday( &initialTime, 0 );
 #endif
-		
 		initialized = true;
 	}
 	
@@ -69,14 +64,9 @@ RakNetTimeNS RakNet::GetTimeNS( void )
 	{
 #ifdef _WIN32
 		QueryPerformanceFrequency( &yo );
-		// The original code shifted right 10 bits
-		//counts = yo.QuadPart >> 10;
-		// It gives the wrong value since 2^10 is not 1000
-		//	counts = yo.QuadPart;// / 1000;
 #else
 		gettimeofday( &initialTime, 0 );
 #endif
-
 		initialized = true;
 	}
 
@@ -88,7 +78,6 @@ RakNetTimeNS RakNet::GetTimeNS( void )
 	__int64 quotient, remainder;
 	quotient=((PerfVal.QuadPart*1000) / yo.QuadPart);
 	remainder=((PerfVal.QuadPart*1000) % yo.QuadPart);
-	//return (PerfVal.QuadPart*1000 / (yo.QuadPart/1000));
 	return quotient*1000 + (remainder*1000 / yo.QuadPart);
 
 #else

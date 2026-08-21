@@ -39,7 +39,6 @@ bool DataBlockEncryptor::IsKeySet( void ) const
 void DataBlockEncryptor::SetKey( const unsigned char key[ 16 ] )
 {
 	keySet = true;
-	//secretKeyAES128.set_key( key );
 	makeKey(&keyEncrypt, DIR_ENCRYPT, 16, (char*)key);
 	makeKey(&keyDecrypt, DIR_DECRYPT, 16, (char*)key);
 	cipherInit(&cipherInst, MODE_ECB, 0); // ECB is not secure except that I chain manually farther down.
@@ -115,7 +114,6 @@ void DataBlockEncryptor::Encrypt( unsigned char *input, int inputLength, unsigne
 #endif
 
 	// AES on the first block
-//	secretKeyAES128.encrypt16( output );
 	blockEncrypt(&cipherInst, &keyEncrypt, output, 16, output);
 
 	lastBlock = 0;
@@ -126,7 +124,6 @@ void DataBlockEncryptor::Encrypt( unsigned char *input, int inputLength, unsigne
 		for ( byteIndex = 0; byteIndex < 16; byteIndex++ )
 			output[ index + byteIndex ] ^= output[ lastBlock + byteIndex ];
 
-		//secretKeyAES128.encrypt16( output + index );
 		blockEncrypt(&cipherInst, &keyEncrypt, output+index, 16, output+index);
 
 		lastBlock = index;
@@ -154,7 +151,6 @@ bool DataBlockEncryptor::Decrypt( unsigned char *input, int inputLength, unsigne
 	// Unchain in reverse order
 	for ( index = 16; ( int ) index <= inputLength - 16;index += 16 )
 	{
-	//	secretKeyAES128.decrypt16( input + index );
 		blockDecrypt(&cipherInst, &keyDecrypt, input + index, 16, input + index);
 
 		for ( byteIndex = 0; byteIndex < 16; byteIndex++ )
@@ -169,7 +165,6 @@ bool DataBlockEncryptor::Decrypt( unsigned char *input, int inputLength, unsigne
 	};
 
 	// Decrypt the first block
-	//secretKeyAES128.decrypt16( input );
 	blockDecrypt(&cipherInst, &keyDecrypt, input, 16, input);
 
 	// Read checksum

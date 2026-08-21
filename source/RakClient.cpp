@@ -117,10 +117,6 @@ Packet* RakClient::Receive( void )
 		
 		if ( packet->data[ 0 ] == ID_CONNECTION_REQUEST_ACCEPTED )
 		{
-//			ConnectionAcceptStruct cas;
-//			cas.Deserialize(bitStream);
-		//	unsigned short remotePort;
-		//	PlayerID externalID;
 			PlayerIndex playerIndex;
 
 			RakNet::BitStream inBitStream(packet->data, packet->length, false);
@@ -148,7 +144,6 @@ Packet* RakClient::Receive( void )
 				DeallocatePacket( packet );
 				return 0;
 			}
-			
 			
 			if ( packet->data[ 0 ] == ID_REMOTE_DISCONNECTION_NOTIFICATION ||
 				packet->data[ 0 ] == ID_REMOTE_CONNECTION_LOST )
@@ -222,8 +217,6 @@ Packet* RakClient::Receive( void )
 		if ( packet->data[ 0 ] == ID_TIMESTAMP &&
 			packet->length == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned int) )
 		{
-			
-
 			RakNet::BitStream inBitStream(packet->data, packet->length, false);
 		
 			RakNetTime timeStamp;

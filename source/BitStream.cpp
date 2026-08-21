@@ -41,16 +41,9 @@ using namespace RakNet;
 BitStream::BitStream()
 {
 	numberOfBitsUsed = 0;
-	//numberOfBitsAllocated = 32 * 8;
 	numberOfBitsAllocated = BITSTREAM_STACK_ALLOCATION_SIZE * 8;
 	readOffset = 0;
-	//data = ( unsigned char* ) malloc( 32 );
 	data = ( unsigned char* ) stackData;
-	
-#ifdef _DEBUG	
-//	assert( data );
-#endif
-	//memset(data, 0, 32);
 	copyData = true;
 }
 
@@ -71,7 +64,6 @@ BitStream::BitStream( int initialBytesToAllocate )
 #ifdef _DEBUG
 	assert( data );
 #endif
-	// memset(data, 0, initialBytesToAllocate);
 	copyData = true;
 }
 
@@ -162,21 +154,9 @@ void BitStream::Reset( void )
 	// in places to serialize/deserialize a buffer. Reallocation
 	// is a dangerous operation (may result in leaks).
 	
-	if ( numberOfBitsUsed > 0 )
-	{
-		//  memset(data, 0, BITS_TO_BYTES(numberOfBitsUsed));
-	}
-	
-	// Don't free memory here for speed efficiency
-	//free(data);  // Use realloc and free so we are more efficient than delete and new for resizing
 	numberOfBitsUsed = 0;
-	
-	//numberOfBitsAllocated=8;
+
 	readOffset = 0;
-	
-	//data=(unsigned char*)malloc(1);
-	// if (numberOfBitsAllocated>0)
-	//  memset(data, 0, BITS_TO_BYTES(numberOfBitsAllocated));
 }
 
 // Write an array or casted stream
@@ -380,7 +360,6 @@ void BitStream::WriteBits( const unsigned char *input, int numberOfBitsToWrite, 
 	
 	// Faster to put the while at the top surprisingly enough
 	while ( numberOfBitsToWrite > 0 )
-		//do
 	{
 		dataByte = *( input + offset );
 		
@@ -410,7 +389,6 @@ void BitStream::WriteBits( const unsigned char *input, int numberOfBitsToWrite, 
 		
 		offset++;
 	}
-	// } while(numberOfBitsToWrite>0);
 }
 
 // Set the stream to some initial data.  For internal use
@@ -454,8 +432,6 @@ void BitStream::WriteCompressed( const unsigned char* input,
 			Write( b );
 			
 			WriteBits( input, ( currentByte + 1 ) << 3, true );
-			//  currentByte--;
-			
 			
 			return ;
 		}
@@ -527,8 +503,6 @@ bool BitStream::ReadBits( unsigned char* output, int numberOfBitsToRead, const b
 		offset++;
 		
 	}
-	
-	//} while(numberOfBitsToRead>0);
 	
 	return true;
 }
@@ -627,7 +601,7 @@ void BitStream::AddBitsAndReallocate( const int numberOfBitsToWrite )
 
 		// Less memory efficient but saves on news and deletes
 		newNumberOfBitsAllocated = ( numberOfBitsToWrite + numberOfBitsUsed ) * 2;
-//		int newByteOffset = BITS_TO_BYTES( numberOfBitsAllocated );
+		// int newByteOffset = BITS_TO_BYTES( numberOfBitsAllocated );
 		// Use realloc and free so we are more efficient than delete and new for resizing
 		int amountToAllocate = BITS_TO_BYTES( newNumberOfBitsAllocated );
 		if (data==(unsigned char*)stackData)
