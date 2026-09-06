@@ -2,7 +2,7 @@
 
 A RakNet fork compatible with SA:MP 0.3.7.
 * Client-Only: Contains only client-side code, with no server implementation.
-* No Networking Logic: Excludes protocol-level networking code (e.g., handshakes).
+* No SA:MP Networking Logic: Excludes protocol-level networking code (e.g., handshakes).
 * Not taken from leaked SA:MP code.
 
 ## Build:
