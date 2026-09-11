@@ -13,4 +13,3 @@ different terms.
 
 Original copyright and licensing notices in the source files have
 been retained.
-

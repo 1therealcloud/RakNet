@@ -840,14 +840,17 @@ namespace RakNet
 	/// Write a bool delta.  Same thing as just calling Write
 	/// \param[in] currentValue The current value to write
 	/// \param[in] lastValue The last value to compare against
+	#ifdef _MSC_VER
+	#pragma warning(disable:4100)   // warning C4100: 'lastValue' : unreferenced formal parameter
+	#endif
 	template <>
 		inline void BitStream::WriteDelta(bool currentValue, bool lastValue)
 	{
-#ifdef _MSC_VER
-#pragma warning(disable:4100)   // warning C4100: 'lastValue' : unreferenced formal parameter
-#endif
 		Write(currentValue);
 	}
+	#ifdef _MSC_VER
+	#pragma warning(pop)
+	#endif
 
 	/// WriteDelta when you don't know what the last value is, or there is no last value.
 	/// \param[in] currentValue The current value to write
