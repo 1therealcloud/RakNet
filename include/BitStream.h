@@ -841,6 +841,7 @@ namespace RakNet
 	/// \param[in] currentValue The current value to write
 	/// \param[in] lastValue The last value to compare against
 	#ifdef _MSC_VER
+	#pragma warning(push)
 	#pragma warning(disable:4100)   // warning C4100: 'lastValue' : unreferenced formal parameter
 	#endif
 	template <>
@@ -962,14 +963,18 @@ namespace RakNet
 	/// Write a bool delta.  Same thing as just calling Write
 	/// \param[in] currentValue The current value to write
 	/// \param[in] lastValue The last value to compare against
+	#ifdef _MSC_VER
+	#pragma warning(push)
+	#pragma warning(disable:4100)   // warning C4100: 'lastValue' : unreferenced formal parameter
+	#endif
 	template <>
 		inline void BitStream::WriteCompressedDelta(bool currentValue, bool lastValue)
 	{
-#ifdef _MSC_VER
-#pragma warning(disable:4100)   // warning C4100: 'lastValue' : unreferenced formal parameter
-#endif
 		Write(currentValue);
 	}
+	#ifdef _MSC_VER
+	#pragma warning(pop)
+	#endif
 
 	/// Save as WriteCompressedDelta(templateType currentValue, templateType lastValue) when we have an unknown second parameter
 	template <class templateType>
