@@ -4,6 +4,7 @@
 * 
 */
 #include "CheckSum.h"
+#include <cstring>
 
 /****************************************************************************
 *        CheckSum::add
@@ -17,17 +18,11 @@
 
 void CheckSum::Add ( unsigned int value )
 {
-	union
-	{
-		unsigned int value;
-		unsigned char bytes[ 4 ];
-	}
+	unsigned char bytes[4];
+	std::memcpy(bytes, &value, sizeof(bytes));
 
-	data;
-	data.value = value;
-
-	for ( unsigned int i = 0; i < sizeof( data.bytes ); i++ )
-		Add ( data.bytes[ i ] );
+	for ( unsigned int i = 0; i < sizeof( bytes ); i++ )
+		Add ( bytes[ i ] );
 } // CheckSum::add(unsigned int)
 
 /****************************************************************************
@@ -42,17 +37,11 @@ void CheckSum::Add ( unsigned int value )
 
 void CheckSum::Add ( unsigned short value )
 {
-	union
-	{
-		unsigned short value;
-		unsigned char bytes[ 2 ];
-	}
+	unsigned char bytes[2];
+	std::memcpy(bytes, &value, sizeof(bytes));
 
-	data;
-	data.value = value;
-
-	for ( unsigned int i = 0; i < sizeof( data.bytes ); i++ )
-		Add ( data.bytes[ i ] );
+	for ( unsigned int i = 0; i < sizeof( bytes ); i++ )
+		Add ( bytes[ i ] );
 } // CheckSum::add(unsigned short)
 
 /****************************************************************************
