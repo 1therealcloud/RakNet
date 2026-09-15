@@ -209,10 +209,7 @@ unsigned HuffmanEncodingTree::DecodeArray( RakNet::BitStream * input, unsigned s
 	
 	for ( unsigned counter = 0; counter < sizeInBits; counter++ )
 	{
-		if ( input->ReadBit() == false )   // left!
-			currentNode = currentNode->left;
-		else
-			currentNode = currentNode->right;
+		currentNode = input->ReadBit() ? currentNode->right : currentNode->left;
 			
 		if ( currentNode->left == 0 && currentNode->right == 0 )   // Leaf
 		{
@@ -244,10 +241,7 @@ void HuffmanEncodingTree::DecodeArray( unsigned char *input, unsigned sizeInBits
 	// For each bit, go left if it is a 0 and right if it is a 1.  When we reach a leaf, that gives us the desired value and we restart from the root
 	for ( unsigned counter = 0; counter < sizeInBits; counter++ )
 	{
-		if ( bitStream.ReadBit() == false )   // left!
-			currentNode = currentNode->left;
-		else
-			currentNode = currentNode->right;
+		currentNode = bitStream.ReadBit() ? currentNode->right : currentNode->left;
 			
 		if ( currentNode->left == 0 && currentNode->right == 0 )   // Leaf
 		{
