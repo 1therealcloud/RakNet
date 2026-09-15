@@ -28,9 +28,7 @@ bool TEABlockEncryptor::IsKeySet(void) const
 
 void TEABlockEncryptor::SetKey(const unsigned char key[16])
 {
-    // Yes, this is intentionally a no-op self-assignment.  R5 does this too:
-    // it only marks the key as set and leaves the embedded key bytes untouched.
-    key = key;
+    memcpy(this->key, key, sizeof(this->key));
     keySet = true;
 }
 
