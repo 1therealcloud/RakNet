@@ -4,12 +4,6 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#define OutputDebugString NULL
-#endif
-
 #define TEA_ROUNDS 32
 #define TEA_XOR_MASK 0x5E94A3CF
 
