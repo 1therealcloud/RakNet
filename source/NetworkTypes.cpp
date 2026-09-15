@@ -56,7 +56,7 @@ bool PlayerID::operator<( const PlayerID& right ) const
 }
 char *PlayerID::ToString(bool writePort) const
 {
-	static char str[22];
+	thread_local char str[22];
 	in_addr in;
 	in.s_addr = binaryAddress;
 	strcpy(str, inet_ntoa( in ));
