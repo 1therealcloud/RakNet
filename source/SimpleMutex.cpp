@@ -37,10 +37,8 @@ SimpleMutex::~SimpleMutex()
 #endif
 }
 
-#ifdef _WIN32
-#ifdef _DEBUG
+#if defined(_WIN32) && defined(_DEBUG)
 #include <stdio.h>
-#endif
 #endif
 
 void SimpleMutex::Lock(void)
