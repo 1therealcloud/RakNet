@@ -12,15 +12,6 @@
 
 // 14.Dec.2005 Cirilo:  Removed silly hex keys; keys are now effectively unsigned char.
 
-// KevinJ - TODO - What the hell is __UNUS?  It causes DevCPP not to compile.   I don't know what this is for so I'm taking it out entirely
-/*
-#if (defined(__GNUC__)  || defined(__GCCXML__))
-#define __UNUS	__attribute__((unused))
-#else
-*/
-#define __UNUS
-//#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,7 +126,7 @@ void InvMixColumn(word8 a[4][4], word8 BC) {
 
 }
 
-int rijndaelKeySched (word8 k[MAXKC][4], int keyBits __UNUS, word8 W[MAXROUNDS+1][4][4])
+int rijndaelKeySched (word8 k[MAXKC][4], int keyBits, word8 W[MAXROUNDS+1][4][4])
 {
 #ifdef _MSC_VER
 	#pragma warning( disable : 4100 ) // warning C4100: <variable name> : unreferenced formal parameter
@@ -197,7 +188,7 @@ int rijndaelKeySched (word8 k[MAXKC][4], int keyBits __UNUS, word8 W[MAXROUNDS+1
 	return 0;
 }
 
-int rijndaelKeyEnctoDec (int keyBits __UNUS, word8 W[MAXROUNDS+1][4][4])
+int rijndaelKeyEnctoDec (int keyBits, word8 W[MAXROUNDS+1][4][4])
 {
 #ifdef _MSC_VER
 	#pragma warning( disable : 4100 ) // warning C4100: <variable name> : unreferenced formal parameter
@@ -761,7 +752,7 @@ int blockDecrypt(cipherInstance *cipher,
  */
 
 int cipherUpdateRounds(cipherInstance *cipher,
-	keyInstance *key, BYTE *input, int inputLen __UNUS, BYTE *outBuffer, int rounds)
+	keyInstance *key, BYTE *input, int inputLen, BYTE *outBuffer, int rounds)
 {
 #ifdef _MSC_VER
 	#pragma warning( disable : 4100 ) // warning C4100: <variable name> : unreferenced formal parameter
