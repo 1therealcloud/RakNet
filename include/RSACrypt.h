@@ -139,7 +139,7 @@ namespace big
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-		while ( true )
+		for ( ;; )
 		{
 			umodulo( c, a, c );
 
@@ -246,7 +246,7 @@ namespace big
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-		while ( true )
+		for ( ;; )
 		{
 			// x[2] = x[0] - x[1] * q (mod b0)
 			SubMulMod( q, x1, x0, n0, x2 );
@@ -401,7 +401,7 @@ namespace big
 	}
 
 	RECORD("TEST") << "Entering loop...";
-	while (true)
+	for (;;)
 	{
 	// x[2] = x[0] - x[1] * q (mod b0)
 	SubMulMod(q, x1, x0, n0, x2);
@@ -551,7 +551,7 @@ namespace big
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-		while ( true )
+		for ( ;; )
 		{
 			// {q, a} = a / b
 			udivide( a, b, q, a );

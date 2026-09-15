@@ -1346,7 +1346,7 @@ bool RakPeer::IsBanned( const char *IP )
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-			while ( true )
+			for ( ;; )
 			{
 				if ( banList[ banListIndex ]->IP[ characterIndex ] == IP[ characterIndex ] )
 				{

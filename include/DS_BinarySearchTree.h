@@ -468,7 +468,7 @@ namespace DataStructures
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-		while ( true )
+		for ( ;; )
 		{
 			// Move pointer
 			
@@ -516,7 +516,7 @@ namespace DataStructures
 	{
 		BinarySearchTreeType temp;
 		
-		while ( 1 )
+		for ( ;; )
 		{
 			if ( ( ( current->left ) != 0 ) && ( *( current->item ) < *( current->left->item ) ) )
 			{
@@ -710,7 +710,7 @@ namespace DataStructures
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-			while ( true )    // This loop traverses the tree to find a spot for insertion
+			for ( ;; )    // This loop traverses the tree to find a spot for insertion
 			{
 			
 				if ( input < *( current->item ) )

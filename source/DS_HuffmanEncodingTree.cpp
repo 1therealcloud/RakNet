@@ -98,7 +98,7 @@ void HuffmanEncodingTree::GenerateFromFrequencyTable( unsigned int frequencyTabl
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-	while ( 1 )
+	for (;;)
 	{
 		huffmanEncodingTreeNodeList.Beginning();
 		HuffmanEncodingTreeNode *lesser, *greater;
@@ -272,7 +272,7 @@ void HuffmanEncodingTree::InsertNodeIntoSortedList( HuffmanEncodingTreeNode * no
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-	while ( 1 )
+	for ( ;; )
 	{
 		if ( huffmanEncodingTreeNodeList->Peek()->weight < node->weight )
 			++( *huffmanEncodingTreeNodeList );

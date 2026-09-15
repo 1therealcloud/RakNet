@@ -902,7 +902,7 @@ namespace DataStructures
 #ifdef _MSC_VER
 #pragma warning( disable : 4127 ) // warning C4127: conditional expression is constant
 #endif
-		while (1)
+		for (;;)
 		{
 			if (key==page->keys[index])
 			{
