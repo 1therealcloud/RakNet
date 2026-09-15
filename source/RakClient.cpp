@@ -168,11 +168,15 @@ Packet* RakClient::Receive( void )
 				
 			if ( i >= 0 )
 			{
-				otherClients[ i ].playerId = packet->playerId;
-				otherClients[ i ].isActive = true;
-				otherClients[ i ].staticData.Reset();
-				// The static data is what is left over in the stream
-				otherClients[ i ].staticData.Write( ( char* ) bitStream.GetData() + BITS_TO_BYTES( bitStream.GetReadOffset() ), bitStream.GetNumberOfBytesUsed() - BITS_TO_BYTES( bitStream.GetReadOffset() ) );
+				unsigned readOffsetBytes = BITS_TO_BYTES( bitStream.GetReadOffset() );
+				if ( readOffsetBytes <= (unsigned) bitStream.GetNumberOfBytesUsed() )
+				{
+					otherClients[ i ].playerId = packet->playerId;
+					otherClients[ i ].isActive = true;
+					otherClients[ i ].staticData.Reset();
+					// The static data is what is left over in the stream
+					otherClients[ i ].staticData.Write( ( char* ) bitStream.GetData() + readOffsetBytes, bitStream.GetNumberOfBytesUsed() - readOffsetBytes );
+				}
 			}
 		}
 		else if ( packet->data[ 0 ] == ID_BROADCAST_PINGS )
