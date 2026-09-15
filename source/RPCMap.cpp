@@ -74,8 +74,8 @@ void RPCMap::AddIdentifierWithFunction(int *uniqueIdentifier, void *functionPoin
     node->functionPointer = functionPointer;
     node->isPointerToMember = isPointerToMember;
 
-    // R5 overwrites this slot directly.  It does not free/check a previous
-    // registration first.
+    if (rpcSet[identifier])
+        delete rpcSet[identifier];
     rpcSet[identifier] = node;
 }
 
