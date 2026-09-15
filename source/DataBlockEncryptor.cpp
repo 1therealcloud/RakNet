@@ -181,6 +181,8 @@ bool DataBlockEncryptor::Decrypt( unsigned char *input, int inputLength, unsigne
 	// Ignore the high 4 bytes
 	paddingBytes = encodedPad & 0x0F;
 
+	if ( ( unsigned ) inputLength < sizeof( randomChar ) + sizeof( checkSum ) + sizeof( encodedPad ) + paddingBytes )
+		return false;
 
 	// Get the data length
 	*outputLength = inputLength - sizeof( randomChar ) - sizeof( checkSum ) - sizeof( encodedPad ) - paddingBytes;
