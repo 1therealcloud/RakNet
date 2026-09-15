@@ -1205,18 +1205,14 @@ PlayerID RakPeer::GetPlayerIDFromIndex( int index )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::AddToBanList( const char *IP, RakNetTime milliseconds )
 {
-	unsigned index;
 	RakNetTime time = RakNet::GetTime();
 
 	if ( IP == 0 || IP[ 0 ] == 0 || strlen( IP ) > 15 )
 		return ;
 
-	// If this guy is already in the ban list, do nothing
-	index = 0;
-
 	banListMutex.Lock();
 
-	for ( ; index < banList.Size(); index++ )
+	for ( unsigned index = 0; index < banList.Size(); index++ )
 	{
 		if ( strcmp( IP, banList[ index ]->IP ) == 0 )
 		{
@@ -1254,18 +1250,16 @@ void RakPeer::AddToBanList( const char *IP, RakNetTime milliseconds )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::RemoveFromBanList( const char *IP )
 {
-	unsigned index;
 	BanStruct *temp;
 
 	if ( IP == 0 || IP[ 0 ] == 0 || strlen( IP ) > 15 )
 		return ;
 
-	index = 0;
 	temp=0;
 
 	banListMutex.Lock();
 
-	for ( ; index < banList.Size(); index++ )
+	for ( unsigned index = 0; index < banList.Size(); index++ )
 	{
 		if ( strcmp( IP, banList[ index ]->IP ) == 0 )
 		{
@@ -1292,11 +1286,10 @@ void RakPeer::RemoveFromBanList( const char *IP )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::ClearBanList( void )
 {
-	unsigned index;
-	index = 0;
+	
 	banListMutex.Lock();
 
-	for ( ; index < banList.Size(); index++ )
+	for ( unsigned index = 0; index < banList.Size(); index++ )
 	{
 		delete [] banList[index]->IP;
 		delete banList[index];
