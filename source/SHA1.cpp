@@ -273,8 +273,6 @@ void CSHA1::Final()
 		memset( m_count, 0, 8 );
 
 		memset( finalcount, 0, 8 );
-
-		Transform( m_state, m_buffer );
 }
 
 // Get the final hash as a pre-formatted string
