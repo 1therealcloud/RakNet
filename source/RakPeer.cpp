@@ -1286,7 +1286,6 @@ void RakPeer::RemoveFromBanList( const char *IP )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 void RakPeer::ClearBanList( void )
 {
-	
 	banListMutex.Lock();
 
 	for ( unsigned index = 0; index < banList.Size(); index++ )
