@@ -19,9 +19,8 @@
 #include "BitStream.h"
 #include <assert.h>
 #include <string.h>
-#include <memory.h>
 
-StringCompressor* StringCompressor::instance=0;
+StringCompressor* StringCompressor::instance=nullptr;
 int StringCompressor::referenceCount=0;
 
 void StringCompressor::AddReference(void)
@@ -40,7 +39,7 @@ void StringCompressor::RemoveReference(void)
 		if (--referenceCount==0)
 		{
 			delete instance;
-			instance=0;
+			instance=nullptr;
 		}
 	}
 }
@@ -321,6 +320,9 @@ StringCompressor::StringCompressor()
 }
 void StringCompressor::GenerateTreeFromStrings( unsigned char *input, unsigned inputLength, int languageID )
 {
+	if ( inputLength == 0 )
+		return ;
+
 	HuffmanEncodingTree *huffmanEncodingTree;
 	if (huffmanEncodingTrees.Has(languageID))
 	{
@@ -330,9 +332,6 @@ void StringCompressor::GenerateTreeFromStrings( unsigned char *input, unsigned i
 
 	unsigned index;
 	unsigned int frequencyTable[ 256 ];
-
-	if ( inputLength == 0 )
-		return ;
 
 	// Zero out the frequency table
 	memset( frequencyTable, 0, sizeof( frequencyTable ) );
@@ -356,11 +355,11 @@ StringCompressor::~StringCompressor()
 void StringCompressor::EncodeString( const char *input, int maxCharsToWrite, RakNet::BitStream *output, int languageID )
 {
 	HuffmanEncodingTree *huffmanEncodingTree;
-	if (huffmanEncodingTrees.Has(languageID)==false)
+	if (!huffmanEncodingTrees.Has(languageID))
 		return;
 	huffmanEncodingTree=huffmanEncodingTrees.Get(languageID);
 
-	if ( input == 0 )
+	if ( input == nullptr )
 	{
 		output->WriteCompressed( (unsigned short) 0 );
 		return ;
@@ -388,8 +387,11 @@ void StringCompressor::EncodeString( const char *input, int maxCharsToWrite, Rak
 
 bool StringCompressor::DecodeString( char *output, int maxCharsToWrite, RakNet::BitStream *input, int languageID )
 {
+	if (output == nullptr || maxCharsToWrite <= 0)
+		return false;
+
 	HuffmanEncodingTree *huffmanEncodingTree;
-	if (huffmanEncodingTrees.Has(languageID)==false)
+	if (!huffmanEncodingTrees.Has(languageID))
 		return false;
 	huffmanEncodingTree=huffmanEncodingTrees.Get(languageID);
 
@@ -398,7 +400,7 @@ bool StringCompressor::DecodeString( char *output, int maxCharsToWrite, RakNet::
 
 	output[ 0 ] = 0;
 
-	if ( input->ReadCompressed( stringBitLength ) == false )
+	if (!input->ReadCompressed( stringBitLength ))
 		return false;
 
 	if ( input->GetNumberOfUnreadBits() < stringBitLength )
