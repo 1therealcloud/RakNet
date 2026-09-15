@@ -20,8 +20,7 @@ StringTable::StringTable()
 
 StringTable::~StringTable()
 {
-	unsigned i;
-	for (i=0; i < orderedStringList.Size(); i++)
+	for (unsigned i=0; i < orderedStringList.Size(); i++)
 	{
 		if (orderedStringList[i].b)
 			delete [] orderedStringList[i].str;
