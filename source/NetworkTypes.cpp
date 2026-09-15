@@ -81,10 +81,7 @@ NetworkID& NetworkID::operator = ( const NetworkID& input )
 
 bool NetworkID::operator==( const NetworkID& right ) const
 {
-	if (NetworkID::peerToPeerMode)
-		return playerId == right.playerId && localSystemId == right.localSystemId;
-	else
-		return localSystemId==right.localSystemId;
+	return NetworkID::peerToPeerMode ? (playerId == right.playerId && localSystemId == right.localSystemId) : (localSystemId == right.localSystemId);
 }
 
 bool NetworkID::operator!=( const NetworkID& right ) const
