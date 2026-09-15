@@ -32,13 +32,17 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 	if ( verbosityLevel == 0 )
 	{
 		// Verbosity level 0
+		float packetlossPercent = ( s->totalBitsSent > 0 )
+			? 100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent
+			: 0.0f;
+
 		sprintf( buffer,
 			"Total bytes sent: %u\n"
 			"Total bytes received: %u\n"
 			"Packetloss: %.1f%%\n",
 			BITS_TO_BYTES( s->totalBitsSent ),
 			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent );
+			packetlossPercent );
 	}
 
 	else if ( verbosityLevel == 1 )
@@ -47,9 +51,12 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 		double elapsedTime;
 		double bpsSent;
 		double bpsReceived;
+		float packetlossPercent = ( s->totalBitsSent > 0 )
+			? 100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent
+			: 0.0f;
 		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
-		bpsSent = (double) s->totalBitsSent / elapsedTime;
-		bpsReceived= (double) s->bitsReceived / elapsedTime;
+		bpsSent = ( elapsedTime > 0.0 ) ? (double) s->totalBitsSent / elapsedTime : 0.0;
+		bpsReceived = ( elapsedTime > 0.0 ) ? (double) s->bitsReceived / elapsedTime : 0.0;
 		// Verbosity level 1
 
 		sprintf( buffer,
@@ -77,7 +84,7 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			s->messagesOnResendQueue,
 			s->messageResends,
 			BITS_TO_BYTES( s->messagesTotalBitsResent ),
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent,
+			packetlossPercent,
 			s->duplicateMessagesReceived + s->invalidMessagesReceived + s->messagesReceived,
 			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
 			s->acknowlegementsReceived,
@@ -92,9 +99,12 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 		double elapsedTime;
 		double bpsSent;
 		double bpsReceived;
+		float packetlossPercent = ( s->totalBitsSent > 0 )
+			? 100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent
+			: 0.0f;
 		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
-		bpsSent = (double) s->totalBitsSent / elapsedTime;
-		bpsReceived= (double) s->bitsReceived / elapsedTime;
+		bpsSent = ( elapsedTime > 0.0 ) ? (double) s->totalBitsSent / elapsedTime : 0.0;
+		bpsReceived = ( elapsedTime > 0.0 ) ? (double) s->bitsReceived / elapsedTime : 0.0;
 
 		// Verbosity level 2.
 		sprintf( buffer,
@@ -144,7 +154,7 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			s->packetsReceived + s->packetsWithBadCRCReceived, s->packetsReceived, s->packetsWithBadCRCReceived,
 			s->acknowlegementsReceived + s->duplicateAcknowlegementsReceived, s->acknowlegementsReceived, s->duplicateAcknowlegementsReceived,
 			s->messagesReceived + s->invalidMessagesReceived + s->duplicateMessagesReceived, s->messagesReceived, s->invalidMessagesReceived, s->duplicateMessagesReceived,
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent,
+			packetlossPercent,
 			s->packetsSent,
 			s->acknowlegementsSent,
 			s->acknowlegementsPending,
