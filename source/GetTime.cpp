@@ -31,7 +31,7 @@ static timeval initialTime;
 
 RakNetTime RakNet::GetTime( void )
 {
-	if ( initialized == false )
+	if (!initialized)
 	{
 #ifdef _WIN32
 		QueryPerformanceFrequency( &yo );
@@ -60,7 +60,7 @@ RakNetTime RakNet::GetTime( void )
 
 RakNetTimeNS RakNet::GetTimeNS( void )
 {
-	if ( initialized == false )
+	if (!initialized)
 	{
 #ifdef _WIN32
 		QueryPerformanceFrequency( &yo );
