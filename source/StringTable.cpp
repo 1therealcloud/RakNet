@@ -71,7 +71,7 @@ void StringTable::AddString(const char *str, bool copyString)
 	if (!orderedStringList.Insert(sab.str,sab))
 	{
 		if (copyString)
-			delete sab.str;
+			delete [] sab.str; // sab.str was allocated with new[]; must be freed with delete[], not delete
 	}
 
 	// If this assert hits you need to increase the range of StringTableType
