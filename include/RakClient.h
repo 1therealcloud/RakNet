@@ -429,9 +429,13 @@ private:
 		///Tel whether the remote client is active or not 
 		
 		bool isActive;
-	}
-	
-	otherClients[ 32 ];
+	};
+
+	/// Maximum number of other (non-server) clients this client tracks ping/static-data for.
+	/// SA-MP compatibility limit -- keep in sync with the wire format, don't change casually.
+	static constexpr unsigned int MAX_OTHER_CLIENTS = 32;
+
+	OtherClientsStruct otherClients[ MAX_OTHER_CLIENTS ];
 	unsigned int seed;
 	unsigned int nextSeed;
 	RakNetTime nextSeedUpdate;

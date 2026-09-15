@@ -27,7 +27,7 @@ RakClient::RakClient()
 {
 	unsigned i;
 	
-	for ( i = 0; i < 32; i++ )
+	for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 		otherClients[ i ].isActive = false;
 		
 	nextSeedUpdate = 0;
@@ -51,7 +51,7 @@ bool RakClient::Connect( const char* host, unsigned short serverPort, unsigned s
 	
 	unsigned i;
 	
-	for ( i = 0; i < 32; i++ )
+	for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 	{
 		otherClients[ i ].isActive = false;
 		otherClients[ i ].playerId = UNASSIGNED_PLAYER_ID;
@@ -186,7 +186,7 @@ Packet* RakClient::Receive( void )
 
 			bitStream.IgnoreBits( 8 ); // Ignore identifier
 			
-			for ( i = 0; i < 32; i++ )
+			for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 			{
 				if ( bitStream.Read( playerId.binaryAddress ) == false )
 					break; // No remaining data!
@@ -298,7 +298,7 @@ int RakClient::GetPlayerPing( const PlayerID playerId )
 {
 	int i;
 	
-	for ( i = 0; i < 32; i++ )
+	for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 		if ( otherClients[ i ].playerId == playerId )
 			return otherClients[ i ].ping;
 			
@@ -579,7 +579,7 @@ int RakClient::GetOtherClientIndexByPlayerID( const PlayerID playerId )
 {
 	unsigned i;
 	
-	for ( i = 0; i < 32; i++ )
+	for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 	{
 		if ( otherClients[ i ].playerId == playerId )
 			return i;
@@ -592,7 +592,7 @@ int RakClient::GetFreeOtherClientIndex( void )
 {
 	unsigned i;
 	
-	for ( i = 0; i < 32; i++ )
+	for ( i = 0; i < MAX_OTHER_CLIENTS; i++ )
 	{
 		if ( otherClients[ i ].isActive == false )
 			return i;
