@@ -40,8 +40,8 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			"Total bytes sent: %u\n"
 			"Total bytes received: %u\n"
 			"Packetloss: %.1f%%\n",
-			BITS_TO_BYTES( s->totalBitsSent ),
-			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
+			(unsigned int)BITS_TO_BYTES( s->totalBitsSent ),
+			(unsigned int)BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
 			packetlossPercent );
 	}
 
@@ -55,6 +55,7 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			? 100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent
 			: 0.0f;
 		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
+		// Guard against div-by-zero if stats are queried in the same instant the connection started.
 		bpsSent = ( elapsedTime > 0.0 ) ? (double) s->totalBitsSent / elapsedTime : 0.0;
 		bpsReceived = ( elapsedTime > 0.0 ) ? (double) s->bitsReceived / elapsedTime : 0.0;
 		// Verbosity level 1
@@ -78,15 +79,15 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			"KBits per second received:\t\t%.1f\n",
 			s->messageSendBuffer[ SYSTEM_PRIORITY ] + s->messageSendBuffer[ HIGH_PRIORITY ] + s->messageSendBuffer[ MEDIUM_PRIORITY ] + s->messageSendBuffer[ LOW_PRIORITY ],
 			s->messagesSent[ SYSTEM_PRIORITY ] + s->messagesSent[ HIGH_PRIORITY ] + s->messagesSent[ MEDIUM_PRIORITY ] + s->messagesSent[ LOW_PRIORITY ],
-			BITS_TO_BYTES( s->totalBitsSent ),
+			(unsigned int)BITS_TO_BYTES( s->totalBitsSent ),
 			s->acknowlegementsSent,
 			s->acknowlegementsPending,
 			s->messagesOnResendQueue,
 			s->messageResends,
-			BITS_TO_BYTES( s->messagesTotalBitsResent ),
+			(unsigned int)BITS_TO_BYTES( s->messagesTotalBitsResent ),
 			packetlossPercent,
 			s->duplicateMessagesReceived + s->invalidMessagesReceived + s->messagesReceived,
-			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
+			(unsigned int)BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
 			s->acknowlegementsReceived,
 			s->duplicateAcknowlegementsReceived,
 			s->bitsPerSecond  / 1000.0,
@@ -103,6 +104,7 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			? 100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent
 			: 0.0f;
 		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
+		// Guard against div-by-zero if stats are queried in the same instant the connection started.
 		bpsSent = ( elapsedTime > 0.0 ) ? (double) s->totalBitsSent / elapsedTime : 0.0;
 		bpsReceived = ( elapsedTime > 0.0 ) ? (double) s->bitsReceived / elapsedTime : 0.0;
 
@@ -144,13 +146,13 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			"Elapsed time (sec):\t\t\t%.1f\n"
 			"KBits per second sent:\t\t\t%.1f\n"
 			"KBits per second received:\t\t%.1f\n",
-			BITS_TO_BYTES( s->totalBitsSent ),
+			(unsigned int)BITS_TO_BYTES( s->totalBitsSent ),
 			s->messageSendBuffer[ SYSTEM_PRIORITY ], s->messageSendBuffer[ HIGH_PRIORITY ], s->messageSendBuffer[ MEDIUM_PRIORITY ], s->messageSendBuffer[ LOW_PRIORITY ],
 			s->messagesSent[ SYSTEM_PRIORITY ], s->messagesSent[ HIGH_PRIORITY ], s->messagesSent[ MEDIUM_PRIORITY ], s->messagesSent[ LOW_PRIORITY ],
-			BITS_TO_BYTES( s->messageDataBitsSent[ SYSTEM_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ HIGH_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ MEDIUM_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ LOW_PRIORITY ] ),
-			BITS_TO_BYTES( s->messageTotalBitsSent[ SYSTEM_PRIORITY ] - s->messageDataBitsSent[ SYSTEM_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ HIGH_PRIORITY ] - s->messageDataBitsSent[ HIGH_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ MEDIUM_PRIORITY ] - s->messageDataBitsSent[ MEDIUM_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ LOW_PRIORITY ] - s->messageDataBitsSent[ LOW_PRIORITY ] ),
-			BITS_TO_BYTES( s->messageTotalBitsSent[ SYSTEM_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ HIGH_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ MEDIUM_PRIORITY ] ), BITS_TO_BYTES( s->messageTotalBitsSent[ LOW_PRIORITY ] ),
-			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ), BITS_TO_BYTES( s->bitsReceived ), BITS_TO_BYTES( s->bitsWithBadCRCReceived ),
+			(unsigned int)BITS_TO_BYTES( s->messageDataBitsSent[ SYSTEM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageDataBitsSent[ HIGH_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageDataBitsSent[ MEDIUM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageDataBitsSent[ LOW_PRIORITY ] ),
+			(unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ SYSTEM_PRIORITY ] - s->messageDataBitsSent[ SYSTEM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ HIGH_PRIORITY ] - s->messageDataBitsSent[ HIGH_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ MEDIUM_PRIORITY ] - s->messageDataBitsSent[ MEDIUM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ LOW_PRIORITY ] - s->messageDataBitsSent[ LOW_PRIORITY ] ),
+			(unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ SYSTEM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ HIGH_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ MEDIUM_PRIORITY ] ), (unsigned int)BITS_TO_BYTES( s->messageTotalBitsSent[ LOW_PRIORITY ] ),
+			(unsigned int)BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ), (unsigned int)BITS_TO_BYTES( s->bitsReceived ), (unsigned int)BITS_TO_BYTES( s->bitsWithBadCRCReceived ),
 			s->packetsReceived + s->packetsWithBadCRCReceived, s->packetsReceived, s->packetsWithBadCRCReceived,
 			s->acknowlegementsReceived + s->duplicateAcknowlegementsReceived, s->acknowlegementsReceived, s->duplicateAcknowlegementsReceived,
 			s->messagesReceived + s->invalidMessagesReceived + s->duplicateMessagesReceived, s->messagesReceived, s->invalidMessagesReceived, s->duplicateMessagesReceived,
@@ -159,17 +161,17 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			s->acknowlegementsSent,
 			s->acknowlegementsPending,
 			s->messagesOnResendQueue,
-			BITS_TO_BYTES( s->acknowlegementBitsSent ),
+			(unsigned int)BITS_TO_BYTES( s->acknowlegementBitsSent ),
 			s->packetsContainingOnlyAcknowlegements,
 			s->packetsContainingOnlyAcknowlegementsAndResends,
 			s->messageResends,
-			BITS_TO_BYTES( s->messageDataBitsResent ),
-			BITS_TO_BYTES( s->messagesTotalBitsResent - s->messageDataBitsResent ),
-			BITS_TO_BYTES( s->messagesTotalBitsResent ),
+			(unsigned int)BITS_TO_BYTES( s->messageDataBitsResent ),
+			(unsigned int)BITS_TO_BYTES( s->messagesTotalBitsResent - s->messageDataBitsResent ),
+			(unsigned int)BITS_TO_BYTES( s->messagesTotalBitsResent ),
 			s->numberOfSplitMessages,
 			s->numberOfUnsplitMessages,
 			s->totalSplits,
-			BITS_TO_BYTES( s->encryptionBitsSent ),
+			(unsigned int)BITS_TO_BYTES( s->encryptionBitsSent ),
 			s->sequencedMessagesOutOfOrder,
 			s->sequencedMessagesInOrder,
 			s->orderedMessagesOutOfOrder,
