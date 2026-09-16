@@ -203,7 +203,13 @@ bool CSHA1::HashFile( char *szFileName )
 
 	fseek( fIn, 0, SEEK_END );
 
-	ulFileSize = ftell( fIn );
+	long fileSize = ftell( fIn );
+	if ( fileSize < 0 )
+	{
+		fclose( fIn );
+		return ( false );
+	}
+	ulFileSize = ( unsigned long ) fileSize;
 
 	fseek( fIn, 0, SEEK_SET );
 
