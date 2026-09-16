@@ -119,6 +119,11 @@ static const int MAX_OFFLINE_DATA_LENGTH=400; // I set this because I limit ID_C
 Packet *AllocPacket(unsigned dataSize)
 {
 	Packet *p = (Packet *)malloc(sizeof(Packet)+dataSize);
+	if (p == 0)
+	{
+		assert( 0 );
+		abort();
+	}
 	p->data=(unsigned char*)p+sizeof(Packet);
 	p->length=dataSize;
 	p->deleteData=false;
@@ -128,6 +133,12 @@ Packet *AllocPacket(unsigned dataSize)
 Packet *AllocPacket(unsigned dataSize, unsigned char *data)
 {
 	Packet *p = (Packet *)malloc(sizeof(Packet));
+	if (p == 0)
+	{
+		// Out of memory. Same reasoning as the other overload above.
+		assert( 0 );
+		abort();
+	}
 	p->data=data;
 	p->length=dataSize;
 	p->deleteData=true;
@@ -3574,9 +3585,10 @@ bool RakPeer::RunUpdateCycle( void )
 			while ( bitSize > 0 )
 			{
 				// These types are for internal use and should never arrive from a network packet
-				if (data[0]==ID_CONNECTION_ATTEMPT_FAILED && data[0]==ID_MODIFIED_PACKET)
+				if (data[0]==ID_CONNECTION_ATTEMPT_FAILED || data[0]==ID_MODIFIED_PACKET)
 				{
 					RakAssert(0);
+					delete [] data;
 					continue;
 				}
 
