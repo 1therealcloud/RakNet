@@ -293,9 +293,10 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 	// decode this whole chunk if the decoder is defined.
 	if ( encryptor.IsKeySet() )
 	{
+		int originalLength = length;
 		if ( encryptor.Decrypt( ( unsigned char* ) buffer, length, ( unsigned char* ) buffer, &length ) == false )
 		{
-			statistics.bitsWithBadCRCReceived += length * 8;
+			statistics.bitsWithBadCRCReceived += originalLength * 8;
 			statistics.packetsWithBadCRCReceived++;
 			return false;
 		}
@@ -1004,7 +1005,7 @@ void ReliabilityLayer::SendBitStream( SOCKET s, PlayerID playerId, RakNet::BitSt
 		encryptor.Encrypt( ( unsigned char* ) bitStream->GetData(), length, ( unsigned char* ) bitStream->GetData(), &length );
 		statistics.encryptionBitsSent = ( length - oldLength ) * 8;
 
-		assert( ( length % 16 ) == 0 );
+		assert( ( length % 8 ) == 0 );
 	}
 	else
 	{
