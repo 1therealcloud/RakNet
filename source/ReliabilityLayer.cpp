@@ -33,6 +33,9 @@ static const int DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE=512;
 static const float PACKETLOSS_TOLERANCE=.02f; // What percentile packetloss we are willing to accept as background noise.
 static const double MINIMUM_SEND_BPS=144400.0; // Won't go below this send rate
 static const double STARTING_SEND_BPS=512000.0; // What send rate to start at.
+
+static const unsigned int MAX_SPLIT_PACKET_CHANNELS = 32;
+static const unsigned int MAX_FRAGMENTS_PER_SPLIT_PACKET_CHANNEL = 20000;
 static const float PING_MULTIPLIER_TO_RESEND=3.0; // So internet ping variation doesn't cause needless resends
 static const RakNetTime MIN_PING_TO_RESEND=30; // So system timer changes and CPU lag don't send needless resends
 static const RakNetTimeNS TIME_TO_NEW_SAMPLE=500000; // How many ns to wait before starting a new sample.  This way buffers have time to overflow or relax at the new send rate, if they are indeed going to overflow.
@@ -1774,9 +1777,24 @@ void ReliabilityLayer::InsertIntoSplitPacketList( InternalPacket * internalPacke
 	index=splitPacketChannelList.GetIndexFromKey(internalPacket->splitPacketId, &objectExists);
 	if (objectExists==false)
 	{
+		if (splitPacketChannelList.Size() >= MAX_SPLIT_PACKET_CHANNELS)
+		{
+			delete [] internalPacket->data;
+			internalPacketPool.ReleasePointer( internalPacket );
+			return;
+		}
+
 		SplitPacketChannel *newChannel = new SplitPacketChannel;
         index=splitPacketChannelList.Insert(internalPacket->splitPacketId, newChannel);
 	}
+
+	if (splitPacketChannelList[index]->splitPacketList.Size() >= MAX_FRAGMENTS_PER_SPLIT_PACKET_CHANNEL)
+	{
+		delete [] internalPacket->data;
+		internalPacketPool.ReleasePointer( internalPacket );
+		return;
+	}
+
 	splitPacketChannelList[index]->splitPacketList.Insert(internalPacket->splitPacketIndex, internalPacket);
 	splitPacketChannelList[index]->lastUpdateTime=time;
 
