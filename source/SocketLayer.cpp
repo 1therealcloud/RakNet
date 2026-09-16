@@ -470,12 +470,14 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, unsigned int bi
 	sa.sin_addr.s_addr = binaryAddress;
 	sa.sin_family = AF_INET;
 
+	const int maxSendRetries = 8;
+	int sendAttempt = 0;
 	do
 	{
 		// TODO - use WSASendTo which is faster.
 		len = sendto( s, encodedData, encodedLength, 0, ( const sockaddr* ) & sa, sizeof( struct sockaddr_in ) );
 	}
-	while ( len == 0 );
+	while ( len == 0 && ++sendAttempt < maxSendRetries );
 
 	if ( len != SOCKET_ERROR )
 		return 0;
