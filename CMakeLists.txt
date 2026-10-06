@@ -26,7 +26,6 @@ add_library(
     source/rijndael.cpp
     source/RPCMap.cpp
     source/SHA1.cpp
-    source/SimpleMutex.cpp
     source/SocketLayer.cpp
     source/StringCompressor.cpp
     source/StringTable.cpp
