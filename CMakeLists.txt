@@ -22,7 +22,6 @@ add_library(
     source/RakClient.cpp
     source/RakNetStatistics.cpp
     source/RakPeer.cpp
-    source/RakSleep.cpp
     source/Rand.cpp
     source/ReliabilityLayer.cpp
     source/rijndael.cpp
