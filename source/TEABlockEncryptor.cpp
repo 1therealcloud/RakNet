@@ -18,7 +18,7 @@ TEABlockEncryptor::TEABlockEncryptor()
 
 TEABlockEncryptor::~TEABlockEncryptor()
 {
-    // Intentionally non-virtual, matching the R5 implementation.
+    // non-virtual
 }
 
 bool TEABlockEncryptor::IsKeySet(void) const
