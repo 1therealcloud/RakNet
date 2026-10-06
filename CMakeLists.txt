@@ -20,6 +20,7 @@ add_library(
     source/RakClient.cpp
     source/RakNetStatistics.cpp
     source/RakPeer.cpp
+    source/RakServer.cpp
     source/ReliabilityLayer.cpp
     source/RPCMap.cpp
     source/SHA1.cpp
