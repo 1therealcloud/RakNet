@@ -2,7 +2,7 @@
 
 // So stupid Linux doesn't assert in release
 #ifdef _DEBUG
-#define RakAssert(x) assert(x);
+#define RakAssert(x) assert(x)
 #else
-#define RakAssert(x) 
+#define RakAssert(x) ((void)0)
 #endif
