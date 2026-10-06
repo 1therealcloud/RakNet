@@ -255,10 +255,13 @@ void CSHA1::Final()
 		finalcount[ i ] = (unsigned char) ( ( m_count[ ( i >= 4 ? 0 : 1 ) ]
 		>> ( ( 3 - ( i & 3 ) ) * 8 ) ) & 255 ); // Endian independent
 
-		Update( ( unsigned char * ) "\200", 1 );
+		static const unsigned char paddingBlock[ 64 ] = { 0x80 };
 
-		while ( ( m_count[ 0 ] & 504 ) != 448 )
-			Update( ( unsigned char * ) "\0", 1 );
+		unsigned int bufferOffset = ( m_count[ 0 ] >> 3 ) & 63;
+
+		unsigned int paddingLength = ( bufferOffset < 56 ) ? ( 56 - bufferOffset ) : ( 120 - bufferOffset );
+
+		Update( ( unsigned char * ) paddingBlock, paddingLength );
 
 		Update( finalcount, 8 ); // Cause a SHA1Transform()
 
@@ -285,7 +288,7 @@ void CSHA1::Final()
 void CSHA1::ReportHash( char *szReport, unsigned char uReportType )
 {
 	unsigned char i = 0;
-	char szTemp[ 4 ];
+	char szTemp[ 16 ];
 
 	if ( uReportType == REPORT_HEX )
 	{
