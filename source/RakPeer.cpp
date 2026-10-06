@@ -241,7 +241,7 @@ bool RakPeer::Initialize( unsigned short maxConnections, unsigned short localPor
 
 	// for SA-MP compatibility
 	// server uses its listening port as the datagram key; clients override this in Connect()
-	SocketLayer::Instance()->SetDatagramPort( localPort );
+	SocketLayer::Instance()->ConfigureDatagramSocket(connectionSocket, serverMode, localPort);
 
 #if defined (_WIN32) && defined(USE_WAIT_FOR_MULTIPLE_EVENTS)
 	if (_threadSleepTimer>0)
@@ -552,7 +552,8 @@ bool RakPeer::Connect( const char* host, unsigned short remotePort, char* passwo
 
 	// for SA-MP compatibility
 	// datagram port key
-	SocketLayer::Instance()->SetDatagramPort( remotePort );
+    if (!serverMode)
+        SocketLayer::Instance()->ConfigureDatagramSocket(connectionSocket, false, remotePort);
 
 	return SendConnectionRequest( host, remotePort, passwordData, passwordDataLength );
 }
@@ -661,6 +662,9 @@ void RakPeer::Disconnect( unsigned int blockDuration, unsigned char orderingChan
 
 	if ( connectionSocket != INVALID_SOCKET )
 	{
+		// for SA-MP compatibility
+        SocketLayer::Instance()->RemoveDatagramSocket(connectionSocket);
+
 		closesocket( connectionSocket );
 		connectionSocket = INVALID_SOCKET;
 	}
@@ -3854,7 +3858,9 @@ bool RakPeer::RunUpdateCycle( void )
 					}
 					// for SA-MP compatibility
 					// server challenge
-					else if ( (unsigned char)(data)[0] == ID_CONNECTION_REQUEST_ACCEPTED && byteSize == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex)+sizeof(unsigned int) )
+					else if ( (unsigned char)(data)[0] == ID_CONNECTION_REQUEST_ACCEPTED &&
+                        (byteSize == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex) ||
+                         byteSize == sizeof(unsigned char)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex)+sizeof(unsigned int)) )
 					{
 						// Make sure this connection accept is from someone we wanted to connect to
 						bool allowConnection, alreadyConnected;

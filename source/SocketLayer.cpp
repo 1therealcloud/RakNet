@@ -1,3 +1,5 @@
+#include <mutex>
+#include <unordered_map>
 /**
 * @file
 * @brief SocketLayer class implementation 
@@ -41,7 +43,23 @@ typedef int socklen_t;
 
 // for SA-MP compatibility
 // datagram port key
-unsigned short SocketLayer::datagramPortKey = 0;
+namespace
+{
+    struct DatagramSettings
+    {
+        bool server = false;
+        unsigned char portKey = 0;
+    };
+    std::mutex datagramMutex;
+    std::unordered_map<SOCKET, DatagramSettings> datagramSettings;
+
+    DatagramSettings GetDatagramSettings(SOCKET socket)
+    {
+        std::lock_guard<std::mutex> lock(datagramMutex);
+        const auto it = datagramSettings.find(socket);
+        return it != datagramSettings.end() ? it->second : DatagramSettings{};
+    }
+}
 
 bool SocketLayer::socketLayerStarted = false;
 #ifdef _WIN32
@@ -52,7 +70,7 @@ SocketLayer SocketLayer::I;
 
 // for SA-MP compatibility
 // datagram encoding
-static unsigned char sampDatagramBuffer[MAXIMUM_MTU_SIZE + 1];
+static thread_local unsigned char sampDatagramBuffer[MAXIMUM_MTU_SIZE + 1];
 
 static const unsigned char sampDatagramEncryptionTable[256] =
 {
@@ -73,7 +91,9 @@ static const unsigned char sampDatagramEncryptionTable[256] =
     0xAF, 0xED, 0xE7, 0x08, 0xB7, 0x03, 0xE6, 0x8E, 0xAB, 0x91, 0x89, 0x3E, 0x2C, 0x96, 0x42, 0xD9,
     0x78, 0xDF, 0xD0, 0x57, 0x5D, 0x84, 0x41, 0x7E, 0xCE, 0xF7, 0x32, 0xC3, 0xD5, 0x20, 0x0B, 0xA7
 };
-static unsigned char sampDatagramDecodeBuffer[MAXIMUM_MTU_SIZE];
+// for SA-MP compatibility
+// datagram decoding
+static thread_local unsigned char sampDatagramDecodeBuffer[MAXIMUM_MTU_SIZE];
 
 static const unsigned char sampDatagramDecryptionTable[256] =
 {
@@ -217,9 +237,17 @@ SocketLayer::~SocketLayer()
 
 // for SA-MP compatibility
 // datagram port key
-void SocketLayer::SetDatagramPort( unsigned short port )
+void SocketLayer::ConfigureDatagramSocket(SOCKET socket, bool server, unsigned short port)
 {
-    datagramPortKey = static_cast<unsigned short>(port ^ 0xCCCC);
+    std::lock_guard<std::mutex> lock(datagramMutex);
+    datagramSettings[socket] = {server, static_cast<unsigned char>(port ^ 0xCCCC)};
+}
+
+// for SA-MP compatibility
+void SocketLayer::RemoveDatagramSocket(SOCKET socket)
+{
+    std::lock_guard<std::mutex> lock(datagramMutex);
+    datagramSettings.erase(socket);
 }
 
 SOCKET SocketLayer::Connect( SOCKET writeSocket, unsigned int binaryAddress, unsigned short port )
@@ -445,18 +473,15 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 		unsigned short portnum;
 		portnum = ntohs( sa.sin_port );
 
-		// for SA-MP compatibility
-		// datagram decoding
-		const char *decodedData = 0;
-		const int decodedLength = DecodeSampDatagram(
-			data,
-			len,
-			static_cast<unsigned char>(datagramPortKey),
-			&decodedData
-		);
-
-		if ( decodedLength >= 0 )
-			ProcessNetworkPacket( sa.sin_addr.s_addr, portnum, decodedData, decodedLength, rakPeer );
+        // for SA-MP compatibility
+        // only client-to-server datagrams are encoded
+        const auto settings = GetDatagramSettings(s);
+        const char* receivedData = data;
+        int receivedLength = len;
+        if (settings.server)
+            receivedLength = DecodeSampDatagram(data, len, settings.portKey, &receivedData);
+        if (receivedLength >= 0)
+            ProcessNetworkPacket(sa.sin_addr.s_addr, portnum, receivedData, receivedLength, rakPeer);
 
 		return 1;
 	}
@@ -517,18 +542,15 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, unsigned int bi
 		return -1;
 	}
 
-	// for SA-MP compatibility
-	// datagram encoding
-	const char *encodedData = 0;
-	const int encodedLength = EncodeSampDatagram(
-		data,
-		length,
-		static_cast<unsigned char>(datagramPortKey),
-		&encodedData
-	);
-
-	if ( encodedLength < 0 )
-		return -1;
+    // for SA-MP compatibility
+    // server replies are sent without datagram encoding
+    const auto settings = GetDatagramSettings(s);
+    const char* encodedData = data;
+    int encodedLength = length;
+    if (!settings.server)
+        encodedLength = EncodeSampDatagram(data, length, static_cast<unsigned char>(port ^ 0xCCCC), &encodedData);
+    if (encodedLength < 0)
+        return -1;
 
 	int len;
 	sockaddr_in sa;

@@ -511,6 +511,8 @@ public:
 	};
 
 protected:
+    // for SA-MP compatibility
+    bool serverMode = false;
 
 #ifdef _WIN32
 	// friend unsigned __stdcall RecvFromNetworkLoop(LPVOID arguments);

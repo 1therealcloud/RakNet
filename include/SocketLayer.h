@@ -73,7 +73,8 @@ public:
 
 	// for SA-MP compatibility
 	// datagram port key
-	void SetDatagramPort( unsigned short port );
+	void ConfigureDatagramSocket(SOCKET socket, bool server, unsigned short port);
+    void RemoveDatagramSocket(SOCKET socket);
 
 	const char* DomainNameToIP( const char *domainName );
 	
@@ -117,10 +118,6 @@ public:
 	/// \return The local port
 	unsigned short GetLocalPort ( SOCKET s );
 private:
-	
-	// for SA-MP compatibility
-	// datagram port key
-	static unsigned short datagramPortKey;
 
 	static bool socketLayerStarted;
 #ifdef _WIN32

@@ -25,6 +25,8 @@
 
 RakServer::RakServer()
 {
+    // for SA-MP compatibility
+    serverMode = true;
 	nextSeedUpdate = 0;
 	synchronizedRandomInteger = false;
 	relayStaticClientData = false;
