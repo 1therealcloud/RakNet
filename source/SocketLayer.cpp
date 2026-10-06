@@ -187,10 +187,10 @@ SocketLayer::SocketLayer()
 		{
 #if defined(_WIN32) && defined(_DEBUG)
 			DWORD dwIOError = GetLastError();
-			LPVOID messageBuffer;
-			FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			LPSTR messageBuffer = nullptr;
+			FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 				NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-				( LPTSTR ) & messageBuffer, 0, NULL );
+				reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 			// something has gone wrong here...
 			printf( "WSAStartup failed:Error code - %d\n%s", dwIOError, messageBuffer );
 			//Free the buffer.
@@ -235,10 +235,10 @@ SOCKET SocketLayer::Connect( SOCKET writeSocket, unsigned int binaryAddress, uns
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) &messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "WSAConnect failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -264,10 +264,10 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "socket(...) failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -283,10 +283,10 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "setsockopt(SO_REUSEADDR) failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -330,10 +330,10 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "setsockopt(SO_BROADCAST) failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -363,10 +363,10 @@ SOCKET SocketLayer::CreateBoundSocket( unsigned short port, bool blockingSocket,
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "bind(...) failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -489,10 +489,10 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 #if defined(_DEBUG)
 			if ( dwIOError != WSAEINTR )
 			{
-				LPVOID messageBuffer;
-				FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				LPSTR messageBuffer = nullptr;
+				FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 					NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-					( LPTSTR ) & messageBuffer, 0, NULL );
+					reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 				// something has gone wrong here...
 				printf( "recvfrom failed:Error code - %d\n%s", dwIOError, messageBuffer );
 
@@ -562,10 +562,10 @@ int SocketLayer::SendTo( SOCKET s, const char *data, int length, unsigned int bi
 	else if ( dwIOError != WSAEWOULDBLOCK )
 	{
 #if defined(_WIN32) && defined(_DEBUG)
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "sendto failed:Error code - %d\n%s", dwIOError, messageBuffer );
 
@@ -594,10 +594,10 @@ void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 	{
 	#if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "gethostname failed:Error code - %d\n%s", dwIOError, messageBuffer );
 		//Free the buffer.
@@ -613,10 +613,10 @@ void SocketLayer::GetMyIP( char ipList[ 10 ][ 16 ] )
 	{
 #if defined(_WIN32) && defined(_DEBUG)
 		DWORD dwIOError = GetLastError();
-		LPVOID messageBuffer;
-		FormatMessage( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		LPSTR messageBuffer = nullptr;
+		FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL, dwIOError, MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),  // Default language
-			( LPTSTR ) & messageBuffer, 0, NULL );
+			reinterpret_cast<LPSTR>( &messageBuffer ), 0, NULL );
 		// something has gone wrong here...
 		printf( "gethostbyname failed:Error code - %d\n%s", dwIOError, messageBuffer );
 
