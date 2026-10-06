@@ -18,9 +18,6 @@
 #ifndef __RELIABILITY_LAYER_H
 #define __RELIABILITY_LAYER_H
 
-// SA-MP 0.3.7-R5
-#define TEA_ENCRYPTOR
-
 #include "SocketLayer.h"
 #include "MTUSize.h"
 #include "DS_LinkedList.h"
@@ -30,11 +27,7 @@
 #include "BitStream.h"
 #include "InternalPacket.h"
 #include "InternalPacketPool.h"
-#ifdef TEA_ENCRYPTOR
 #include "TEABlockEncryptor.h"
-#else
-#include "DataBlockEncryptor.h"
-#endif
 #include "RakNetStatistics.h"
 #include "SHA1.h"
 #include "DS_OrderedList.h"
@@ -308,11 +301,7 @@ private:
 	double availableBandwidth;
 	bool continuousSend;
 
-#ifdef TEA_ENCRYPTOR
 	TEABlockEncryptor encryptor;
-#else
-	DataBlockEncryptor encryptor;
-#endif
 	unsigned sendPacketCount, receivePacketCount;
 	RakNetTimeNS ackTimeIncrement;
 

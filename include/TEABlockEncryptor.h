@@ -3,9 +3,7 @@
 #ifndef __TEA_BLOCK_ENCRYPTOR_H
 #define __TEA_BLOCK_ENCRYPTOR_H
 
-#include "DataBlockEncryptor.h"
-
-class TEABlockEncryptor : public DataBlockEncryptor
+class TEABlockEncryptor
 {
 public:
     TEABlockEncryptor();
@@ -18,6 +16,7 @@ public:
     bool Decrypt(unsigned char* input, int inputLength, unsigned char* output, int* outputLength);
 
 protected:
+    bool keySet; // from DataBlockEncryptor
     unsigned char key[16];
     unsigned int initSum;
     unsigned int initDelta;
