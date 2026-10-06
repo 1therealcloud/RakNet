@@ -14,7 +14,6 @@ add_library(
 
     source/BitStream.cpp
     source/CheckSum.cpp
-    source/DataBlockEncryptor.cpp
     source/DS_HuffmanEncodingTree.cpp
     source/InternalPacketPool.cpp
     source/NetworkTypes.cpp
@@ -22,7 +21,6 @@ add_library(
     source/RakNetStatistics.cpp
     source/RakPeer.cpp
     source/ReliabilityLayer.cpp
-    source/rijndael.cpp
     source/RPCMap.cpp
     source/SHA1.cpp
     source/SocketLayer.cpp
