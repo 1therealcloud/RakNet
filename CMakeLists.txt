@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(Raknet LANGUAGES CXX)
+project(RakNet LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(Threads REQUIRED)
 
 add_library(
-    Raknet
+    raknet
     STATIC
 
     source/BitStream.cpp
@@ -30,27 +30,27 @@ add_library(
 )
 
 target_include_directories(
-    Raknet
+    raknet
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 target_link_libraries(
-    Raknet
+    raknet
     PUBLIC
         Threads::Threads
 )
 
 if(WIN32)
     target_compile_definitions(
-        Raknet
+        raknet
         PRIVATE
             WIN32_LEAN_AND_MEAN
             NOMINMAX
     )
 
     target_link_libraries(
-        Raknet
+        raknet
         PUBLIC
             ws2_32
     )
