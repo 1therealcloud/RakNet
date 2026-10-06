@@ -13,7 +13,6 @@ add_library(
     STATIC
 
     source/BitStream.cpp
-    source/CheckSum.cpp
     source/DS_HuffmanEncodingTree.cpp
     source/InternalPacketPool.cpp
     source/NetworkTypes.cpp
