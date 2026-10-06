@@ -107,53 +107,25 @@ bool RakServer::Send( RakNet::BitStream *bitStream, PacketPriority priority, Pac
 	return RakPeer::Send( bitStream, priority, reliability, orderingChannel, playerId, broadcast );
 }
 
+// SA:MP
+bool RakServer::SendImmediate( RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast )
+{
+	return RakPeer::SendImmediate(
+		(char*)bitStream->GetData(),
+		bitStream->GetNumberOfBitsUsed(),
+		priority,
+		reliability,
+		orderingChannel,
+		playerId,
+		broadcast,
+		false,
+		RakNet::GetTimeNS() );
+}
+
+// SA:MP
 Packet* RakServer::Receive( void )
 {
 	Packet * packet = RakPeer::Receive();
-
-	// This is just a regular time based update.  Nowhere else good to put it
-
-	if ( RakPeer::IsActive() && occasionalPing )
-	{
-		RakNetTime time = RakNet::GetTime();
-
-		if ( time > broadcastPingsTime || ( packet && packet->data[ 0 ] == ID_RECEIVED_STATIC_DATA ) )
-		{
-			if ( time > broadcastPingsTime )
-				broadcastPingsTime = time + 30000; // Broadcast pings every 30 seconds
-
-			unsigned i, count;
-
-			RemoteSystemStruct *remoteSystem;
-			RakNet::BitStream bitStream( ( PlayerID_Size + sizeof( short ) ) * 32 + sizeof(unsigned char) );
-			unsigned char typeId = ID_BROADCAST_PINGS;
-
-			bitStream.Write( typeId );
-
-			//for ( i = 0, count = 0; count < 32 && i < remoteSystemListSize; i++ )
-			for ( i = 0, count = 0; count < 32 && i < maximumNumberOfPeers; i++ )
-			{
-				remoteSystem = remoteSystemList + i;
-
-				if ( remoteSystem->playerId != UNASSIGNED_PLAYER_ID && remoteSystem->isActive)
-				{
-					bitStream.Write( remoteSystem->playerId.binaryAddress );
-					bitStream.Write( remoteSystem->playerId.port );
-					bitStream.Write( remoteSystem->pingAndClockDifferential[ remoteSystem->pingAndClockDifferentialWriteIndex ].pingTime );
-					count++;
-				}
-			}
-
-			if ( count > 0 )   // If we wrote anything
-			{
-
-				if ( packet && packet->data[ 0 ] == ID_NEW_INCOMING_CONNECTION )   // If this was a new connection
-					Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, packet->playerId, false ); // Send to the new connection
-				else
-					Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, UNASSIGNED_PLAYER_ID, true ); // Send to everyone
-			}
-		}
-	}
 
 	// This is just a regular time based update.  Nowhere else good to put it
 	if ( RakPeer::IsActive() && synchronizedRandomInteger )
@@ -195,84 +167,6 @@ Packet* RakServer::Receive( void )
 			else
 				Send( &outBitStream, SYSTEM_PRIORITY, RELIABLE, 0, UNASSIGNED_PLAYER_ID, true );
 		}
-	}
-
-	if ( packet )
-	{
-		// Intercept specific client / server feature packets. This will do an extra send and still pass on the data to the user
-
-		if ( packet->data[ 0 ] == ID_RECEIVED_STATIC_DATA )
-		{
-			if ( relayStaticClientData )
-			{
-				// Relay static data to the other systems but the sender
-				RakNet::BitStream bitStream( packet->length + PlayerID_Size );
-				unsigned char typeId = ID_REMOTE_STATIC_DATA;
-				bitStream.Write( typeId );
-				bitStream.Write( packet->playerId.binaryAddress );
-				bitStream.Write( packet->playerId.port );
-				bitStream.Write( packet->playerIndex );
-				bitStream.Write( ( char* ) packet->data + sizeof(unsigned char), packet->length - sizeof(unsigned char) );
-				Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, packet->playerId, true );
-			}
-		}
-
-		else
-			if ( packet->data[ 0 ] == ID_DISCONNECTION_NOTIFICATION || packet->data[ 0 ] == ID_CONNECTION_LOST || packet->data[ 0 ] == ID_NEW_INCOMING_CONNECTION )
-			{
-				// Relay the disconnection
-				RakNet::BitStream bitStream( packet->length + PlayerID_Size );
-				unsigned char typeId;
-
-				if ( packet->data[ 0 ] == ID_DISCONNECTION_NOTIFICATION )
-					typeId = ID_REMOTE_DISCONNECTION_NOTIFICATION;
-				else
-					if ( packet->data[ 0 ] == ID_CONNECTION_LOST )
-						typeId = ID_REMOTE_CONNECTION_LOST;
-					else
-						typeId = ID_REMOTE_NEW_INCOMING_CONNECTION;
-
-				bitStream.Write( typeId );
-				bitStream.Write( packet->playerId.binaryAddress );
-				bitStream.Write( packet->playerId.port );
-				bitStream.Write( ( unsigned short& ) packet->playerIndex );
-
-				Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, packet->playerId, true );
-
-				if ( packet->data[ 0 ] == ID_NEW_INCOMING_CONNECTION )
-				{
-					unsigned i;
-
-					//for ( i = 0; i < remoteSystemListSize; i++ )
-					for ( i = 0; i < maximumNumberOfPeers; i++ )
-					{
-						if ( remoteSystemList[ i ].isActive && remoteSystemList[ i ].playerId != UNASSIGNED_PLAYER_ID && packet->playerId != remoteSystemList[ i ].playerId )
-						{
-							bitStream.Reset();
-							typeId = ID_REMOTE_EXISTING_CONNECTION;
-							bitStream.Write( typeId );
-							bitStream.Write( remoteSystemList[ i ].playerId.binaryAddress );
-							bitStream.Write( remoteSystemList[ i ].playerId.port );
-							bitStream.Write( ( unsigned short ) i );
-							// One send to tell them of the connection
-							Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, packet->playerId, false );
-
-							if ( relayStaticClientData )
-							{
-								bitStream.Reset();
-								typeId = ID_REMOTE_STATIC_DATA;
-								bitStream.Write( typeId );
-								bitStream.Write( remoteSystemList[ i ].playerId.binaryAddress );
-								bitStream.Write( remoteSystemList[ i ].playerId.port );
-								bitStream.Write( (unsigned short) i );
-								bitStream.Write( ( char* ) remoteSystemList[ i ].staticData.GetData(), remoteSystemList[ i ].staticData.GetNumberOfBytesUsed() );
-								// Another send to tell them of the static data
-								Send( &bitStream, SYSTEM_PRIORITY, RELIABLE, 0, packet->playerId, false );
-							}
-						}
-					}
-				}
-			}
 	}
 
 	return packet;
@@ -372,29 +266,95 @@ bool RakServer::DeleteCompressionLayer( bool inputLayer )
 	return RakPeer::DeleteCompressionLayer( inputLayer );
 }
 
-void RakServer::RegisterAsRemoteProcedureCall( char* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
+// SA:MP
+void RakServer::RegisterAsRemoteProcedureCall( int* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
 {
 	RakPeer::RegisterAsRemoteProcedureCall( uniqueID, functionPointer );
 }
 
-void RakServer::RegisterClassMemberRPC( char* uniqueID, void *functionPointer )
+// SA:MP
+void RakServer::RegisterClassMemberRPC( int* uniqueID, void *functionPointer )
 {
 	RakPeer::RegisterClassMemberRPC( uniqueID, functionPointer );
 }
 
-void RakServer::UnregisterAsRemoteProcedureCall( char* uniqueID )
+// SA:MP
+void RakServer::UnregisterAsRemoteProcedureCall( int* uniqueID )
 {
 	RakPeer::UnregisterAsRemoteProcedureCall( uniqueID );
 }
 
-bool RakServer::RPC( char* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+// SA:MP
+bool RakServer::RPC( int* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp )
+{
+	return RakPeer::RPC( uniqueID, parameters, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, UNASSIGNED_NETWORK_ID, 0 );
+}
+
+// SA:MP
+bool RakServer::RPC( int* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+{
+	return RakPeer::RPC( uniqueID, parameters, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget );
+}
+
+// SA:MP
+bool RakServer::RPC( int* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
 	return RakPeer::RPC( uniqueID, data, bitLength, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget );
 }
 
-bool RakServer::RPC( char* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+// SA:MP
+bool RakServer::RPC_( int* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
-	return RakPeer::RPC( uniqueID, parameters, priority, reliability, orderingChannel, playerId, broadcast, shiftTimestamp, networkID, replyFromTarget );
+	if ( uniqueID == 0 )
+		return false;
+
+	(void)networkID;
+	(void)replyFromTarget;
+
+	const char *data = 0;
+	unsigned int bitLength = 0;
+
+	if ( parameters )
+	{
+		data = (const char*)parameters->GetData();
+		bitLength = parameters->GetNumberOfBitsUsed();
+	}
+
+	RakNet::BitStream outgoingBitStream;
+
+	if ( shiftTimestamp )
+	{
+		outgoingBitStream.Write( (unsigned char)ID_TIMESTAMP );
+		outgoingBitStream.Write( (unsigned int)RakNet::GetTime() );
+	}
+
+	outgoingBitStream.Write( (unsigned char)ID_RPC );
+	outgoingBitStream.Write( (unsigned char)(*uniqueID) );
+	outgoingBitStream.WriteCompressed( bitLength );
+
+	if ( bitLength > 0 )
+		outgoingBitStream.WriteBits( (const unsigned char*)data, bitLength, false );
+	else
+		outgoingBitStream.WriteCompressed( (unsigned int)0 );
+
+	RakPeer::SendImmediate(
+		(char*)outgoingBitStream.GetData(),
+		outgoingBitStream.GetNumberOfBitsUsed(),
+		priority,
+		reliability,
+		orderingChannel,
+		playerId,
+		broadcast,
+		false,
+		RakNet::GetTimeNS() );
+
+	return true;
+}
+
+// SA:MP
+RakPeer::RemoteSystemStruct *RakServer::GetRemoteSystemFromPlayerID( const PlayerID playerId )
+{
+	return RakPeer::GetRemoteSystemFromPlayerID( playerId, false, false );
 }
 
 void RakServer::SetTrackFrequencyTable( bool b )
@@ -465,7 +425,7 @@ void RakServer::SetStaticClientData( const PlayerID playerId, const char *data, 
 // This will read the data from playerChangedId and send it to playerToSendToId
 void RakServer::ChangeStaticClientData( const PlayerID playerChangedId, PlayerID playerToSendToId )
 {
-	RemoteSystemStruct * remoteSystem = GetRemoteSystemFromPlayerID( playerChangedId, false, true );
+	RemoteSystemStruct * remoteSystem = RakPeer::GetRemoteSystemFromPlayerID( playerChangedId, false, true );
 
 	if ( remoteSystem == 0 )
 		return ; // No such playerChangedId
@@ -524,9 +484,19 @@ PlayerID RakServer::GetPlayerIDFromIndex( int index )
 	return RakPeer::GetPlayerIDFromIndex( index );
 }
 
-void RakServer::AddToBanList( const char *IP )
+// SA:MP
+PlayerID RakServer::GetPlayerIDFromIndexRaw( int index )
 {
-	RakPeer::AddToBanList( IP );
+	if ( index >= 0 && index < maximumNumberOfPeers )
+		return remoteSystemList[ index ].playerId;
+
+	return UNASSIGNED_PLAYER_ID;
+}
+
+// SA:MP
+void RakServer::AddToBanList( const char *IP, RakNetTime milliseconds )
+{
+	RakPeer::AddToBanList( IP, milliseconds );
 }
 
 void RakServer::RemoveFromBanList( const char *IP )
@@ -572,6 +542,12 @@ void RakServer::AdvertiseSystem( const char *host, unsigned short remotePort, co
 RakNetStatisticsStruct * const RakServer::GetStatistics( const PlayerID playerId )
 {
 	return RakPeer::GetStatistics( playerId );
+}
+
+// SA:MP
+RakNetTime RakServer::GetCorrectedTime( const PlayerID playerId, RakNetTime time )
+{
+	return time - RakPeer::GetBestClockDifferential( playerId );
 }
 
 void RakServer::ApplyNetworkSimulator( double maxSendBPS, unsigned short minExtraPing, unsigned short extraPingVariance)

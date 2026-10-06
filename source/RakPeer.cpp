@@ -239,6 +239,10 @@ bool RakPeer::Initialize( unsigned short maxConnections, unsigned short localPor
 			localPort=localPort2;
 	}
 
+	// for SA-MP compatibility
+	// server uses its listening port as the datagram key; clients override this in Connect()
+	SocketLayer::Instance()->SetDatagramPort( localPort );
+
 #if defined (_WIN32) && defined(USE_WAIT_FOR_MULTIPLE_EVENTS)
 	if (_threadSleepTimer>0)
 	{

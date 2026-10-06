@@ -93,6 +93,9 @@ public:
 	/// \param[in] broadcast Whether to send to everyone or not.  If true, then the meaning of \a playerId changes to mean who NOT to send to.
 	/// \return Returns false on failure, true on success	
 	bool Send( RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast );
+
+	// SA:MP
+	bool SendImmediate( RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast );
 	
 	/// Gets a packet from the incoming packet queue.
 	/// Use DeallocatePacket() to deallocate the packet after you are done with it.
@@ -202,19 +205,43 @@ public:
 	/// Register a C or static member function as available for calling as a remote procedure call
 	/// \param[in] uniqueID: A null-terminated unique string to identify this procedure.  Recommended you use the macro CLASS_MEMBER_ID for class member functions
 	/// \param[in] functionPointer  The name of the function to be used as a function pointer. This can be called whether active or not, and registered functions stay registered unless unregistered
-	void RegisterAsRemoteProcedureCall( char* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) );
+	// SA:MP
+	void RegisterAsRemoteProcedureCall( int* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) );
 
 	/// \ingroup RAKNET_RPC
 	/// Register a C++ member function as available for calling as a remote procedure call.
 	/// \param[in] uniqueID: A null terminated string to identify this procedure.Recommended you use the macro REGISTER_CLASS_MEMBER_RPC
 	/// \param[in] functionPointer: The name of the function to be used as a function pointer. This can be called whether active or not, and registered functions stay registered unless unregistered with UnregisterAsRemoteProcedureCall
 	/// \sa ObjectMemberRPC.cpp
-	void RegisterClassMemberRPC( char* uniqueID, void *functionPointer );
+	// SA:MP
+	void RegisterClassMemberRPC( int* uniqueID, void *functionPointer );
 
 	///\ingroup RAKNET_RPC
 	/// Unregisters a C function as available for calling as a remote procedure call that was formerly registeredwith RegisterAsRemoteProcedureCallOnly call offline
 	/// \param[in] uniqueID A string of only letters to identify this procedure.  Recommended you use the macro CLASS_MEMBER_ID for class member functions.  Must match the parameterpassed to RegisterAsRemoteProcedureCall
-	void UnregisterAsRemoteProcedureCall( char* uniqueID );
+	// SA:MP
+	void UnregisterAsRemoteProcedureCall( int* uniqueID );
+
+	// SA:MP
+	bool RPC( int* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp );
+
+	/// \ingroup RAKNET_RPC
+	/// Calls a C function on the remote system that was already registered using RegisterAsRemoteProcedureCall.
+	/// If you want that function to return data you should call RPC from that system in the same wayReturns true on a successful packet
+	/// send (this does not indicate the recipient performed the call), false on failure
+	/// \param[in] uniqueID A NULL terimianted string to this procedure.  Recommended you use the macro CLASS_MEMBER_ID for class member functions.  Must match the parameter
+	/// \param[in] bitStream The bitstream to send
+	/// \param[in] priority What priority level to send on.
+	/// \param[in] reliability How reliability to send this data
+	/// \param[in] orderingChannel When using ordered or sequenced packets, what channel to order these on.
+	/// \param[in] playerId Who to send this packet to, or in the case of broadcasting who not to send it to.  Use UNASSIGNED_PLAYER_ID to specify none
+	/// \param[in] broadcast True to send this packet to all connected systems. If true, then playerId specifies who not to send the packet to.
+	/// \param[in] shiftTimestamp True to add a timestamp to your data, such that the first byte is ID_TIMESTAMP and the next sizeof(RakNetTime) is the timestamp.
+	/// \param[in] networkID For static functions, pass UNASSIGNED_NETWORK_ID.  For member functions, you must derive from NetworkIDGenerator and pass the value returned by NetworkIDGenerator::GetNetworkID for that object.
+	/// \param[in] replyFromTarget If 0, this function is non-blocking.  Otherwise it will block while waiting for a reply from the target procedure, which is remtely written to RPCParameters::replyToSender and copied to replyFromTarget.  The block will return early on disconnect or if the sent packet is unreliable and more than 3X the ping has elapsed.
+	/// \return True on a successful packet send (this does not indicate the recipient performed the call), false on failure
+	// SA:MP
+	bool RPC( int* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget );
 
 	/// \ingroup RAKNET_RPC
 	/// Calls a C function on the remote system that was already registered using RegisterAsRemoteProcedureCall.
@@ -232,25 +259,14 @@ public:
 	/// \param[in] networkID For static functions, pass UNASSIGNED_NETWORK_ID.  For member functions, you must derive from NetworkIDGenerator and pass the value returned by NetworkIDGenerator::GetNetworkID for that object.
 	/// \param[in] replyFromTarget If 0, this function is non-blocking.  Otherwise it will block while waiting for a reply from the target procedure, which is remtely written to RPCParameters::replyToSender and copied to replyFromTarget.  The block will return early on disconnect or if the sent packet is unreliable and more than 3X the ping has elapsed.
 	/// \return True on a successful packet send (this does not indicate the recipient performed the call), false on failure
-	bool RPC( char* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget );
+	// SA:MP
+	bool RPC( int* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget );
 
-	/// \ingroup RAKNET_RPC
-	/// Calls a C function on the remote system that was already registered using RegisterAsRemoteProcedureCall.
-	/// If you want that function to return data you should call RPC from that system in the same wayReturns true on a successful packet
-	/// send (this does not indicate the recipient performed the call), false on failure
-	/// \param[in] uniqueID A NULL terimianted string to this procedure.  Recommended you use the macro CLASS_MEMBER_ID for class member functions.  Must match the parameter
-	/// \param[in] bitStream The bitstream to send
-	/// \param[in] priority What priority level to send on.
-	/// \param[in] reliability How reliability to send this data
-	/// \param[in] orderingChannel When using ordered or sequenced packets, what channel to order these on.
-	/// \param[in] playerId Who to send this packet to, or in the case of broadcasting who not to send it to.  Use UNASSIGNED_PLAYER_ID to specify none
-	/// \param[in] broadcast True to send this packet to all connected systems. If true, then playerId specifies who not to send the packet to.
-	/// \param[in] shiftTimestamp True to add a timestamp to your data, such that the first byte is ID_TIMESTAMP and the next sizeof(RakNetTime) is the timestamp.
-	/// \param[in] networkID For static functions, pass UNASSIGNED_NETWORK_ID.  For member functions, you must derive from NetworkIDGenerator and pass the value returned by NetworkIDGenerator::GetNetworkID for that object.
-	/// \param[in] replyFromTarget If 0, this function is non-blocking.  Otherwise it will block while waiting for a reply from the target procedure, which is remtely written to RPCParameters::replyToSender and copied to replyFromTarget.  The block will return early on disconnect or if the sent packet is unreliable and more than 3X the ping has elapsed.
-	/// \return True on a successful packet send (this does not indicate the recipient performed the call), false on failure
-	bool RPC( char* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget );
+	// SA:MP
+	bool RPC_( int* uniqueID, RakNet::BitStream *bitStream, PacketPriority priority, PacketReliability reliability, char orderingChannel, PlayerID playerId, bool broadcast, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget );
 
+	// SA:MP
+	RakPeer::RemoteSystemStruct *GetRemoteSystemFromPlayerID( const PlayerID playerId );
 	/// Enables or disables frequency table tracking.  This is required to get a frequency table, which is used in GenerateCompressionLayer()
 	/// This value persists between connect calls and defaults to false (no frequency tracking)
 	/// \pre You can call this at any time - however you SHOULD only call it when disconnected.  Otherwise you will only trackpart of the values sent over the network.
@@ -375,9 +391,13 @@ public:
 	/// \param[in] index Index should range between 0 and the maximum number of players allowed - 1.
 	PlayerID GetPlayerIDFromIndex( int index );
 
+	// SA:MP
+	PlayerID GetPlayerIDFromIndexRaw( int index );
+
 	/// Bans an IP from connecting.  Banned IPs persist between connections.
 	/// param[in] IP Dotted IP address. Can use * as a wildcard, such as 128.0.0.* will banAll IP addresses starting with 128.0.0
-	void AddToBanList( const char *IP );
+	// SA:MP
+	void AddToBanList( const char *IP, RakNetTime milliseconds=0 );
 
 	/// Allows a previously banned IP to connect. 
 	/// param[in] Dotted IP address. Can use * as a wildcard, such as 128.0.0.* will banAll IP addresses starting with 128.0.0
@@ -429,6 +449,9 @@ public:
 	/// \return 0 on can't find the specified system.  A pointer to a set of data otherwise.
 	/// \sa RakNetStatistics.h
 	RakNetStatisticsStruct * const GetStatistics( const PlayerID playerId );
+
+	// SA:MP
+	RakNetTime GetCorrectedTime( const PlayerID playerId, RakNetTime time );
 
 	/// Adds simulated ping and packet loss to the outgoing data flow.
 	/// To simulate bi-directional ping and packet loss, you should call this on both the sender and the recipient, with half the total ping and maxSendBPS value on each.
