@@ -1,4 +1,13 @@
-// Implements the SA-MP 0.3.7-R5 TEA block encryptor used by ReliabilityLayer.
+/*
+* TEABlockEncryptor.h
+* Copyright (C) 2026 1therealcloud
+*
+* Licensed under the GNU General Public License v3.0.
+* See LICENSE.txt file in the project root for full license text.
+* https://www.gnu.org/licenses/gpl-3.0.txt
+*/
+
+// implements the SA-MP 0.3.7 TEA block encryptor used by ReliabilityLayer
 
 #ifndef __TEA_BLOCK_ENCRYPTOR_H
 #define __TEA_BLOCK_ENCRYPTOR_H

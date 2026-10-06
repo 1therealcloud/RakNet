@@ -1,3 +1,12 @@
+/*
+* TEABlockEncryptor.cpp
+* Copyright (C) 2026 1therealcloud
+*
+* Licensed under the GNU General Public License v3.0.
+* See LICENSE.txt file in the project root for full license text.
+* https://www.gnu.org/licenses/gpl-3.0.txt
+*/
+
 #include "TEABlockEncryptor.h"
 #include "CheckSum.h"
 #include "Rand.h"
