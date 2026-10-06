@@ -16,7 +16,6 @@ add_library(
     source/CheckSum.cpp
     source/DataBlockEncryptor.cpp
     source/DS_HuffmanEncodingTree.cpp
-    source/GetTime.cpp
     source/InternalPacketPool.cpp
     source/NetworkTypes.cpp
     source/RakClient.cpp

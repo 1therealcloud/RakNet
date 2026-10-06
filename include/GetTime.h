@@ -18,16 +18,36 @@
 #ifndef __GET_TIME_H
 #define __GET_TIME_H
 
-#include "Export.h"
+#include <chrono>
 #include "NetworkTypes.h" // For RakNetTime
 
 /// The namespace RakNet is not consistently used.  It's only purpose is to avoid compiler errors for classes whose names are very common.
 /// For the most part I've tried to avoid this simply by using names very likely to be unique for my classes.
 namespace RakNet
 {
-	/// Returns the value from QueryPerformanceCounter.  This is the function RakNet uses to represent time.
-	RakNetTime RAK_DLL_EXPORT GetTime( void );
-	RakNetTimeNS RAK_DLL_EXPORT GetTimeNS( void );
+	namespace detail
+	{
+		// static local, thread-safe init
+		inline std::chrono::steady_clock::time_point StartTime( void )
+		{
+			static const std::chrono::steady_clock::time_point t = std::chrono::steady_clock::now();
+			return t;
+		}
+	}
+
+	/// Returns ms since the first call (steady_clock). This is the function RakNet uses to represent time.
+	inline RakNetTime GetTime( void )
+	{
+		using namespace std::chrono;
+		return (RakNetTime) duration_cast<milliseconds>( steady_clock::now() - detail::StartTime() ).count();
+	}
+
+	// microseconds, not ns
+	inline RakNetTimeNS GetTimeNS( void )
+	{
+		using namespace std::chrono;
+		return (RakNetTimeNS) duration_cast<microseconds>( steady_clock::now() - detail::StartTime() ).count();
+	}
 }
 
 #endif
