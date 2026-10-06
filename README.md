@@ -1,7 +1,7 @@
 # RakNet 2.52
 
 A RakNet fork compatible with SA:MP 0.3.7.
-* Client-Only: Contains only client-side code, with no server implementation.
+* Includes both client and server implementations.
 * No SA:MP Networking Logic: Excludes protocol-level networking code (e.g., handshakes).
 * Not taken from leaked SA:MP code.
 
