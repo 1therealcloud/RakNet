@@ -15,11 +15,6 @@
 /// Software Foundation; either version 2 of the License, or (at your
 /// option) any later version.
 
-
-#if defined(_MSC_VER) && _MSC_VER < 1299 // VC6 doesn't support template specialization
-#include "BitStream_NoTemplate.h"
-#else
-
 #ifndef __BITSTREAM_H
 #define __BITSTREAM_H
 
@@ -1438,5 +1433,3 @@ namespace RakNet
 #endif
 
 #endif 
-
-#endif // VC6
