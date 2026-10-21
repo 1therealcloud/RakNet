@@ -5,21 +5,18 @@
 // Shows simple use of the bitstream class
 // ----------------------------------------------------------------------
 
-#include "Multiplayer.h"
 #include "RakServerInterface.h"
 #include "RakClientInterface.h"
 #include "RakNetworkFactory.h"
 #include "BitStream.h"
 #include <stdlib.h> // For atoi
 #include <cstring> // For strlen
+#include <stdio.h>
 
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h" // Developers of a certain platform will know what to do here.
-#elif defined(_WIN32)
+#ifdef _WIN32
 #include <windows.h> // Sleep
 #else
 #include <unistd.h> // usleep
-#include <cstdio>
 #endif
 
 bool quit;
@@ -108,31 +105,18 @@ void clientRPC(RPCParameters *rpcParameters)
 	quit=true;
 }
 
-char *strcpy(char *target, char *source)
+static char *ReadLine(char *buffer, size_t size)
 {
-	if (target==0)
+	if (!fgets(buffer, (int)size, stdin))
 		return 0;
-	if (source==0)
-	{
-		target[0]=0;
-		return target;
-	}
-
-	char *targetIndex=target;
-	char *sourceIndex=source;
-	while (*sourceIndex)
-		*targetIndex++ = *sourceIndex++;
-	*targetIndex=0;
-	return target;
+	buffer[strcspn(buffer, "\r\n")]=0;
+	return buffer;
 }
-
 
 int main(void)
 {
 	RakClientInterface *rakClient=RakNetworkFactory::GetRakClientInterface();
 	RakServerInterface *rakServer=RakNetworkFactory::GetRakServerInterface();
-	Multiplayer<RakClientInterface> rakClientMultiplayer;
-	Multiplayer<RakServerInterface> rakServerMultiplayer;
 
 #ifndef WIN32
 	#define getch getchar
@@ -143,7 +127,8 @@ int main(void)
 	// Defined in NetworkTypes.h.
 	// You can register a function anytime
 
-	REGISTER_STATIC_RPC(rakClient, clientRPC);
+	int clientRpcId=101;
+	rakClient->RegisterAsRemoteProcedureCall(&clientRpcId, clientRPC);
 
 	if (rakServer->Start(1,0,30,2000)==false)
 	{
@@ -163,7 +148,7 @@ int main(void)
 	printf("Difficulty: Beginner\n\n");
 
 	printf("Enter your name.\n");
-	gets(text);
+	ReadLine(text, sizeof(text));
 	if (text[0]==0)
 		strcpy(text, "Unnamed!");
 	// Write the number of characters of the name into the bitstream
@@ -174,7 +159,7 @@ int main(void)
 	outgoingBitstream.Write(text, (int) strlen(text));
 
 	printf("Enter your age (numbers only).\n");
-	gets(text);
+	ReadLine(text, sizeof(text));
 	if (text[0]==0)
 		age=0;
 	else
@@ -188,17 +173,17 @@ int main(void)
 
 	// Now demonstrate dynamic packets by choosing one of two paths in which to write different amounts / types of data.
 	printf("Are you employed (y/n)?\n");
-	if (gets(text)&&text[0]=='y')
+	if (ReadLine(text, sizeof(text))&&text[0]=='y')
 	{
 		outgoingBitstream.Write(true); // Writing a bool takes 1 bit
 
 		// Read some data into a struct
 		EmploymentStruct employmentStruct;
 		printf("What is your salary (enter a number only)?\n");
-		gets(text);
+		ReadLine(text, sizeof(text));
 		employmentStruct.salary = atoi(text);
 		printf("How many years have you been employed (enter a number only)?\n");
-		gets(text);
+		ReadLine(text, sizeof(text));
 		employmentStruct.yearsEmployed = atoi(text);
 
 		// We can write structs to a bitstream but this is not portable due to:
@@ -219,14 +204,24 @@ int main(void)
 	}
 
 	// RPC functions as well as send can take bitstreams directly
-	bool success = rakServer->RPC("clientRPC",&outgoingBitstream, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_PLAYER_ID, true, false, UNASSIGNED_NETWORK_ID, 0); // broadcast to everyone, which happens to be our one client
+	bool success = rakServer->RPC(&clientRpcId,&outgoingBitstream, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_PLAYER_ID, true, false, UNASSIGNED_NETWORK_ID, 0); // broadcast to everyone, which happens to be our one client
 	if (!success)
 		printf("RPC call failed\n");
 
 	while (!quit)
 	{
-		rakClientMultiplayer.ProcessPackets(rakClient);
-		rakServerMultiplayer.ProcessPackets(rakServer);
+		Packet *packet=rakClient->Receive();
+		while (packet)
+		{
+			rakClient->DeallocatePacket(packet);
+			packet=rakClient->Receive();
+		}
+		packet=rakServer->Receive();
+		while (packet)
+		{
+			rakServer->DeallocatePacket(packet);
+			packet=rakServer->Receive();
+		}
 
 #ifdef _WIN32
 		Sleep(30);
@@ -235,13 +230,13 @@ int main(void)
 #endif
 	}
 	printf("Press enter to quit\n");
-	gets(text);
+	ReadLine(text, sizeof(text));
 
 	rakClient->Disconnect(100,0);
 	rakServer->Disconnect(100,0);
 
 	// This is not necessary since on shutdown everything is unregistered.  This is just here to show usage
-	UNREGISTER_STATIC_RPC(rakClient, clientRPC);
+	rakClient->UnregisterAsRemoteProcedureCall(&clientRpcId);
 
 	RakNetworkFactory::DestroyRakClientInterface(rakClient);
 	RakNetworkFactory::DestroyRakServerInterface(rakServer);

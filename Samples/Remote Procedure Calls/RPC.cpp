@@ -1,15 +1,27 @@
-#include "Multiplayer.h"
 #include "RakServer.h"
 #include "RakClient.h"
 #include "RakNetworkFactory.h"
 #include "BitStream.h"
 #include "NetworkTypes.h"
 #include "RakSleep.h"
+#include <stdio.h>
+#include <string.h>
+
+static char *ReadLine(char *buffer, size_t size)
+{
+	if (!fgets(buffer, (int)size, stdin))
+		return 0;
+	buffer[strcspn(buffer, "\r\n")]=0;
+	return buffer;
+}
+
 using namespace RakNet;
 
 RakClientInterface *rakClient;
 RakServerInterface *rakServer;
 bool quit;
+int serverRpcId=101;
+int clientRpcId=102;
 
 void serverRPC(RPCParameters *rpcParameters)
 {
@@ -18,7 +30,7 @@ void serverRPC(RPCParameters *rpcParameters)
 	else
 		printf("In serverRPC no input");
 
-	rakServer->RPC("clientRPC", "From serverRPC", (int) (strlen("From serverRPC")+1)*8, HIGH_PRIORITY, RELIABLE, 0, rpcParameters->sender, false, false, UNASSIGNED_NETWORK_ID, 0);
+	rakServer->RPC(&clientRpcId, "From serverRPC", (int) (strlen("From serverRPC")+1)*8, HIGH_PRIORITY, RELIABLE, 0, rpcParameters->sender, false, false, UNASSIGNED_NETWORK_ID, 0);
 	RakSleep(1000);
 	quit=true;
 }
@@ -34,9 +46,6 @@ void clientRPC(RPCParameters *rpcParameters)
 
 int main(void)
 {
-	Multiplayer<RakClientInterface> rakClientMultiplayer;
-	Multiplayer<RakServerInterface> rakServerMultiplayer;
-
 	bool isServer;
 	//int state=1;
 	char str[256];
@@ -48,7 +57,7 @@ int main(void)
 	printf("Difficulty: Intermediate\n\n");
 
 	printf("Act as (s)erver or (c)lient?\n");
-	gets(str);
+	ReadLine(str, sizeof(str));
 	if (str[0]==0)
 		return 1;
 
@@ -64,7 +73,7 @@ int main(void)
 	if (isServer)
 	{
 		rakServer=RakNetworkFactory::GetRakServerInterface();
-		REGISTER_STATIC_RPC(rakServer, serverRPC);
+		rakServer->RegisterAsRemoteProcedureCall(&serverRpcId, serverRPC);
 		rakServer->Start(32,0,30,2000);
 	}
 	else
@@ -74,7 +83,7 @@ int main(void)
 		// You can register a function anytime
 		// Note that although you are passing a function pointer, the name you are passing matters.  The macro uses
 		// this name as a unique identifier.  Don't do *f = clientRPC and then register f
-		REGISTER_STATIC_RPC(rakClient, clientRPC);
+		rakClient->RegisterAsRemoteProcedureCall(&clientRpcId, clientRPC);
 		rakClient->Connect("127.0.0.1", 2000, 2100, 0, 30);
 	}	
 		
@@ -86,9 +95,23 @@ int main(void)
 	while (!quit)
 	{
 		if (isServer)
-			rakServerMultiplayer.ProcessPackets(rakServer);
+		{
+			Packet *packet=rakServer->Receive();
+			while (packet)
+			{
+				rakServer->DeallocatePacket(packet);
+				packet=rakServer->Receive();
+			}
+		}
 		else
-			rakClientMultiplayer.ProcessPackets(rakClient);
+		{
+			Packet *packet=rakClient->Receive();
+			while (packet)
+			{
+				rakClient->DeallocatePacket(packet);
+				packet=rakClient->Receive();
+			}
+		}
 
 		if (isServer==false && sent==false)
 		{
@@ -96,21 +119,21 @@ int main(void)
 			// used.
 			char str[200];
 			printf("Enter any text string to show on the server:\n");
-			gets(str);
+			ReadLine(str, sizeof(str));
 			// Don't forget that RPC takes bits as the data length, not bytes!
-			rakClient->RPC("serverRPC",str, (int)((strlen(str)+1)*8), HIGH_PRIORITY, RELIABLE, 0, false, UNASSIGNED_NETWORK_ID,0);
+			rakClient->RPC(&serverRpcId,str, (int)((strlen(str)+1)*8), HIGH_PRIORITY, RELIABLE, 0, false, UNASSIGNED_NETWORK_ID,0);
 			sent=true;
 		}
 	}
 
 
 	printf("Example complete.  Press enter to quit\n");
-	gets(str);
+	ReadLine(str, sizeof(str));
 
 	if (isServer)
 	{	rakServer->Disconnect(0);
 
-		UNREGISTER_STATIC_RPC(rakServer, serverRPC);
+		rakServer->UnregisterAsRemoteProcedureCall(&serverRpcId);
 		RakNetworkFactory::DestroyRakServerInterface(rakServer);
 	}
 	else
@@ -118,7 +141,7 @@ int main(void)
 		rakClient->Disconnect(0);
 
 		// This is not necessary since on shutdown everything is unregistered.  This is just here to show usage
-		UNREGISTER_STATIC_RPC(rakClient, clientRPC);
+		rakClient->UnregisterAsRemoteProcedureCall(&clientRpcId);
 		RakNetworkFactory::DestroyRakClientInterface(rakClient);
 	}
 	

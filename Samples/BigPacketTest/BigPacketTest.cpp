@@ -1,23 +1,29 @@
-#include "Multiplayer.h"
 #include "RakPeerInterface.h"
 #include "RakNetworkFactory.h"
 #include "BitStream.h"
 #include <stdlib.h> // For atoi
 #include <cstring> // For strlen
-#include <conio.h>
 #include "RakNetStatistics.h"
 #include "GetTime.h"
 #include "PacketEnumerations.h"
 #include "MTUSize.h"
 #include <stdio.h>
 
-#ifdef _COMPATIBILITY_1
-#include "Compatibility1Includes.h" // Developers of a certain platform will know what to do here.
-#elif defined(_WIN32)
+static char *ReadLine(char *buffer, size_t size)
+{
+	if (!fgets(buffer, (int)size, stdin))
+		return 0;
+	buffer[strcspn(buffer, "\r\n")]=0;
+	return buffer;
+}
+
+
+#ifdef _WIN32
+#include <conio.h>
 #include <windows.h> // Sleep
 #else
 #include <unistd.h> // usleep
-#include <cstdio>
+#define getch getchar
 #endif
 
 bool quit;
@@ -28,55 +34,10 @@ bool sentPacket=false;
 RakPeerInterface *peer1, *peer2;
 char *text;
 
-template <class InterfaceType>
-class BigPacketMultiplayer : public Multiplayer<InterfaceType>
-{
-	void ProcessUnhandledPacket( Packet *packet, unsigned char packetIdentifier, InterfaceType *interfaceType )
-	{
-		if (peer2)
-		{
-			RakNetStatisticsStruct *rss=peer2->GetStatistics(peer2->GetPlayerIDFromIndex(0));
-			StatisticsToString(rss, text, 2);
-			printf("%s", text);
-		}
-		if (peer1)
-		{
-			RakNetStatisticsStruct *rss=peer1->GetStatistics(peer1->GetPlayerIDFromIndex(0));
-			StatisticsToString(rss, text, 2);
-			printf("%s", text);
-		}
-
-		if (packet->data[0]==255)
-		{
-			bool dataValid=true;
-			for (int i=1; i < BIG_PACKET_SIZE; i++)
-			{
-                if (packet->data[i]!=i%256)
-				{
-					dataValid=false;
-					break;
-				}
-			}
-
-			if (dataValid)
-				printf("Test succeeded. %i bytes.\n", packet->length);
-			else
-				printf("Test failed. %i bytes.\n", packet->length);
-		}
-		else
-			printf("Unknown packet %i: Test failed. %i bytes.\n", packet->data[0], packet->length);
-
-		quit=true;
-	}
-};
-
 int main(void)
 {
 	peer1=peer2=0;
 	
-	BigPacketMultiplayer<RakPeerInterface> peerMP1;
-	Multiplayer<RakPeerInterface> peerMP2;
-
 	text= new char [BIG_PACKET_SIZE];
 	quit=false;
 	RakNetTime nextStatTime = RakNet::GetTime() + 1000;
@@ -98,7 +59,8 @@ int main(void)
 		peer2=RakNetworkFactory::GetRakPeerInterface();
 		printf("Working as sender\n");
 		printf("Enter remote IP: ");
-		gets(text);
+		if (!ReadLine(text, BIG_PACKET_SIZE))
+			text[0]=0;
 		if (text[0]==0)
 			strcpy(text, "127.0.0.1");
 	}
@@ -121,7 +83,11 @@ int main(void)
 		peer2->Connect(text, 60000, 0, 0);
 		peer2->SetMTUSize(1492);
 	}
+#ifdef _WIN32
 	Sleep(500);
+#else
+	usleep(500 * 1000);
+#endif
 
 	// Always apply the network simulator on two systems, never just one, with half the values on each.
 	// Otherwise the flow control gets confused.
@@ -242,7 +208,7 @@ int main(void)
 	stop=RakNet::GetTime();
 	double seconds = (double)(stop-start)/1000.0;
 	printf("%i bytes per second transfered. Press enter to quit\n", (int)((double)(BIG_PACKET_SIZE) / seconds )) ;
-	gets(text);
+	getchar();
 
 	delete []text;
 	RakNetworkFactory::DestroyRakPeerInterface(peer1);

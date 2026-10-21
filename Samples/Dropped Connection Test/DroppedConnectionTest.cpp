@@ -9,11 +9,22 @@
 #include <conio.h>
 #include <windows.h> // Sleep
 #else
-#include "../Unix/kbhit.h"
+#include <sys/select.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#endif
+
+#ifndef _WIN32
+static int kbhit(void)
+{
+	fd_set readSet;
+	struct timeval timeout = {0, 0};
+	FD_ZERO(&readSet);
+	FD_SET(0, &readSet);
+	return select(1, &readSet, 0, 0, &timeout)>0;
+}
 #endif
 
 #ifdef _DEBUG
@@ -78,8 +89,10 @@ int main(void)
 		if (kbhit())
 		{
 #ifndef _WIN32
-			gets(buff);
-			ch=buff[0];
+			int key=getchar();
+			if (key==EOF)
+				break;
+			ch=(unsigned char)key;
 #else
 			ch=getch();
 #endif			
@@ -179,7 +192,7 @@ int main(void)
 				switch (p->data[0])
 				{
 				case ID_CONNECTION_REQUEST_ACCEPTED:
-					printf("%i: %ID_CONNECTION_REQUEST_ACCEPTED from %i.\n",sender, p->playerId.port);
+					printf("%i: ID_CONNECTION_REQUEST_ACCEPTED from %i.\n",sender, p->playerId.port);
 					break;
 				case ID_DISCONNECTION_NOTIFICATION:
 					// Connection lost normally

@@ -9,12 +9,32 @@
 #include <cstring>
 #include <stdlib.h>
 #include "Rand.h"
+static char *ReadLine(char *buffer, size_t size)
+{
+	if (!fgets(buffer, (int)size, stdin))
+		return 0;
+	buffer[strcspn(buffer, "\r\n")]=0;
+	return buffer;
+}
+
 
 #ifdef _WIN32
 #include <conio.h>
 #include <windows.h> // Sleep
 #else
 #include <unistd.h> // usleep
+#include <sys/select.h>
+
+static int kbhit(void)
+{
+	fd_set readSet;
+	struct timeval timeout = {0, 0};
+	FD_ZERO(&readSet);
+	FD_SET(0, &readSet);
+	return select(1, &readSet, 0, 0, &timeout)>0;
+}
+
+#define getch getchar
 #endif
 
 int main(void)
@@ -36,7 +56,7 @@ int main(void)
 	printf("Difficulty: Beginner\n\n");
 
 	printf("Act as (s)ender or (r)eceiver?\n");
-	gets(str);
+	ReadLine(str, sizeof(str));
 	if (str[0]==0)
 		return 1;
 
@@ -46,25 +66,25 @@ int main(void)
 		receiver = 0;
 
 		printf("Enter number of ms to pass between sends: ");
-		gets(str);
+		ReadLine(str, sizeof(str));
 		if (str[0]==0)
 			sendInterval=10;
 		else
 			sendInterval=atoi(str);
 
 		printf("Enter remote IP: ");
-		gets(ip);
+		ReadLine(ip, sizeof(ip));
 		if (ip[0]==0)
 			strcpy(ip, "127.0.0.1");
 		
 		printf("Enter remote port: ");
-		gets(str);
+		ReadLine(str, sizeof(str));
 		if (str[0]==0)
 			strcpy(str, "60000");
 		remotePort=atoi(str);
 
 		printf("Enter local port: ");
-		gets(str);
+		ReadLine(str, sizeof(str));
 		if (str[0]==0)
 			strcpy(str, "0");
 		localPort=atoi(str);
@@ -80,7 +100,7 @@ int main(void)
 		sender=0;
 
 		printf("Enter local port: ");
-		gets(str);
+		ReadLine(str, sizeof(str));
 		if (str[0]==0)
 			strcpy(str, "60000");
 		localPort=atoi(str);
@@ -97,7 +117,7 @@ int main(void)
 
 	
 	printf("How long to run this test for, in seconds?\n");
-	gets(str);
+	ReadLine(str, sizeof(str));
 	if (str[0]==0)
 		strcpy(str, "60");
 	
@@ -112,7 +132,7 @@ int main(void)
 	{
 		if (kbhit())
 		{
-			char ch=getch();
+			int ch=getch();
 			if (ch=='q')
 				return 1;
 			else if (ch==' ')
@@ -230,7 +250,7 @@ int main(void)
 	}
 
 	printf("Press any key to continue\n");
-	gets(str);
+	ReadLine(str, sizeof(str));
 
 	if (sender)
 		RakNetworkFactory::DestroyRakPeerInterface(sender);
