@@ -14,7 +14,6 @@
 /// Software Foundation; either version 2 of the License, or (at your
 /// option) any later version.
 
-#include "LogCommandParser.h"
 #include "RakNetworkFactory.h"
 #include "RakServerInterface.h"
 #include "RakClientInterface.h"
@@ -22,14 +21,6 @@
 #include "RakClient.h"
 #include "RakPeerInterface.h"
 #include "RakPeer.h"
-#include "ConsoleServer.h"
-#include "PacketLogger.h"
-#include "ReplicaManager.h"
-#include "TelnetTransport.h"
-#include "PacketConsoleLogger.h"
-#include "PacketFileLogger.h"
-#include "Router.h"
-#include "ConnectionGraph.h"
 
 RakClientInterface* RakNetworkFactory::GetRakClientInterface( void )
 {
@@ -43,42 +34,6 @@ RakPeerInterface* RakNetworkFactory::GetRakPeerInterface( void )
 {
 	return new RakPeer;
 }
-ConsoleServer* RakNetworkFactory::GetConsoleServer( void )
-{
-	return new ConsoleServer;
-}
-ReplicaManager* RakNetworkFactory::GetReplicaManager( void )
-{
-	return new ReplicaManager;
-}
-LogCommandParser* RakNetworkFactory::GetLogCommandParser( void )
-{
-	return new LogCommandParser;
-}
-PacketLogger* RakNetworkFactory::GetPacketLogger( void )
-{
-	return new PacketLogger;
-}
-TelnetTransport* RakNetworkFactory::GetTelnetTransport( void )
-{
-	return new TelnetTransport;
-}
-PacketConsoleLogger* RakNetworkFactory::GetPacketConsoleLogger( void )
-{
-	return new PacketConsoleLogger;
-}
-PacketFileLogger* RakNetworkFactory::GetPacketFileLogger( void )
-{
-	return new PacketFileLogger;
-}
-Router* RakNetworkFactory::GetRouter( void )
-{
-	return new Router;
-}
-ConnectionGraph* RakNetworkFactory::GetConnectionGraph( void )
-{
-	return new ConnectionGraph;
-}
 void RakNetworkFactory::DestroyRakClientInterface( RakClientInterface* i )
 {
 	delete ( RakClient* ) i;
@@ -90,40 +45,4 @@ void RakNetworkFactory::DestroyRakServerInterface( RakServerInterface* i )
 void RakNetworkFactory::DestroyRakPeerInterface( RakPeerInterface* i )
 {
 	delete ( RakPeer* ) i;
-}
-void RakNetworkFactory::DestroyConsoleServer( ConsoleServer* i)
-{
-	delete ( ConsoleServer* ) i;
-}
-void RakNetworkFactory::DestroyReplicaManager( ReplicaManager* i)
-{
-	delete ( ReplicaManager* ) i;
-}
-void RakNetworkFactory::DestroyLogCommandParser( LogCommandParser* i)
-{
-	delete ( LogCommandParser* ) i;
-}
-void RakNetworkFactory::DestroyPacketLogger( PacketLogger* i)
-{
-	delete ( PacketLogger* ) i;
-}
-void RakNetworkFactory::DestroyTelnetTransport(  TelnetTransport* i )
-{
-	delete ( TelnetTransport* ) i;
-}
-void RakNetworkFactory::DestroyPacketConsoleLogger(  PacketConsoleLogger* i )
-{
-	delete ( PacketConsoleLogger* ) i;
-}
-void RakNetworkFactory::DestroyPacketFileLogger(  PacketFileLogger* i )
-{
-	delete ( PacketFileLogger* ) i;
-}
-void RakNetworkFactory::DestroyRouter(  Router* i )
-{
-	delete ( Router* ) i;
-}
-void RakNetworkFactory::DestroyConnectionGraph(  ConnectionGraph* i )
-{
-	delete ( ConnectionGraph* ) i;
 }

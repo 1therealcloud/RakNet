@@ -71,14 +71,6 @@ public:
 	/// \param[in] key Byte stream for the encryption key
 	void SetEncryptionKey( const unsigned char *key );
 
-	/// Depreciated, from IO Completion ports
-	/// \param[in] s The socket
-	void SetSocket( SOCKET s );
-
-	///	Returns what was passed to SetSocket
-	/// \return The socket
-	SOCKET GetSocket( void );
-
 	/// Set the time, in MS, to use before considering ourselves disconnected after not being able to deliver a reliable packet
 	/// Default time is 10,000 or 10 seconds in release and 30,000 or 30 seconds in debug.
 	/// \param[in] time Time, in MS
@@ -334,10 +326,6 @@ private:
     unsigned int messageWindowCount;
     unsigned int messagePreviousCount;
 
-#ifdef __USE_IO_COMPLETION_PORTS
-	///\note Windows Port only
-	SOCKET readWriteSocket;
-#endif
 	///This variable is so that free memory can be called by only the update thread so we don't have to mutex things so much
 	bool freeThreadedMemoryOnNextUpdate;
 

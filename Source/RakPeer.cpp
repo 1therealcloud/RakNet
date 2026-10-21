@@ -18,9 +18,6 @@
 #include "RakPeer.h"
 #include "NetworkTypes.h"
 
-#ifdef __USE_IO_COMPLETION_PORTS
-#include "AsynchronousFileIO.h"
-#endif
 
 #ifdef _WIN32
 //#include <Shlwapi.h>
@@ -39,7 +36,6 @@
 #include "PluginInterface.h"
 #include "StringCompressor.h"
 #include "StringTable.h"
-#include "NetworkIDGenerator.h"
 #include "NetworkTypes.h"
 #include "RakSleep.h"
 #include "RouterInterface.h"
@@ -78,44 +74,6 @@ int PlayerIDAndIndexComp( const PlayerID &key, const PlayerIDAndIndex &data )
 		return 0;
 	return 1;
 }
-
-// On a Little-endian machine the RSA key and message are mangled, but we're
-// trying to be friendly to the little endians, so we do byte order
-// mangling on Big-Endian machines.  Note that this mangling is independent
-// of the byte order used on the network (which also defaults to little-end).
-#ifdef HOST_ENDIAN_IS_BIG
-	void __inline BSWAPCPY(unsigned char *dest, unsigned char *source, int bytesize)
-	{
-	#ifdef _DEBUG
-		assert( (bytesize % 4 == 0)&&(bytesize)&& "Something is wrong with your exponent or modulus size.");
-	#endif
-		int i;
-		for (i=0; i<bytesize; i+=4)
-		{
-			dest[i] = source[i+3];
-			dest[i+1] = source[i+2];
-			dest[i+2] = source[i+1];
-			dest[i+3] = source[i];
-		}
-	}
-	void __inline BSWAPSELF(unsigned char *source, int bytesize)
-	{
-	#ifdef _DEBUG
-		assert( (bytesize % 4 == 0)&&(bytesize)&& "Something is wrong with your exponent or modulus size.");
-	#endif
-		int i;
-		unsigned char a, b;
-		for (i=0; i<bytesize; i+=4)
-		{
-			a = source[i];
-			b = source[i+1];
-			source[i] = source[i+3];
-			source[i+1] = source[i+2];
-			source[i+2] = b;
-			source[i+3] = a;
-		}
-	}
-#endif
 
 // for samp compatibility: keep the cookie outside the request queue
 static unsigned short openConnectionCookie = 0;
@@ -643,9 +601,6 @@ void RakPeer::Disconnect( unsigned int blockDuration, unsigned char orderingChan
 
 		// Normally the thread will call DecreaseUserCount on termination but if we aren't using threads just do it
 		// manually
-#ifdef __USE_IO_COMPLETION_PORTS
-		AsynchronousFileIO::Instance()->DecreaseUserCount();
-#endif
 	}
 
 	while ( isMainLoopThreadActive )
@@ -2480,22 +2435,6 @@ void RakPeer::OnConnectionRequest( RakPeer::RemoteSystemStruct *remoteSystem )
 	// Already handled by caller
 	//if ( AllowIncomingConnections() )
 	{
-#ifdef __USE_IO_COMPLETION_PORTS
-		unsigned index;
-
-		// remoteSystemList in network thread
-		for ( index = 0; index < maximumNumberOfPeers; index++ )
-		//for ( index = 0; index < remoteSystemListSize; index++ )
-			if ( remoteSystemList + index == remoteSystem )
-				break;
-
-		if ( SetupIOCompletionPortSocket( index ) == false )
-		{
-			// Socket error
-			assert( 0 );
-			return ;
-		}
-#endif
 
 		RakNet::BitStream bitStream(sizeof(unsigned char)+sizeof(unsigned short)+sizeof(unsigned int)+sizeof(unsigned short)+sizeof(PlayerIndex));
 		bitStream.Write((unsigned char)ID_CONNECTION_REQUEST_ACCEPTED);
@@ -2800,25 +2739,6 @@ void RakPeer::HandleRPCReplyPacket( const char *data, int length, PlayerID playe
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#ifdef __USE_IO_COMPLETION_PORTS
-bool RakPeer::SetupIOCompletionPortSocket( int index )
-{
-	SOCKET newSocket;
-
-	if ( remoteSystemList[ index ].reliabilityLayer.GetSocket() != INVALID_SOCKET )
-		closesocket( remoteSystemList[ index ].reliabilityLayer.GetSocket() );
-
-	newSocket = SocketLayer::Instance()->CreateBoundSocket( myPlayerId.port + index + 1, false );
-
-	SocketLayer::Instance()->Connect( newSocket, remoteSystemList[ index ].playerId.binaryAddress, remoteSystemList[ index ].playerId.port ); // port is the port of the client
-
-	remoteSystemList[ index ].reliabilityLayer.SetSocket( newSocket );
-
-	// Associate our new socket with a completion port and do the first read
-	return SocketLayer::Instance()->AssociateSocketWithCompletionPortAndRead( newSocket, remoteSystemList[ index ].playerId.binaryAddress, remoteSystemList[ index ].playerId.port, this );
-}
-
-#endif
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 bool RakPeer::AllowIncomingConnections(void) const
@@ -3257,9 +3177,6 @@ void*  RecvFromNetworkLoop( void*  arguments )
 RakPeer *peer = (RakPeer *)arguments;
 unsigned int errorCode;
 
-#ifdef __USE_IO_COMPLETION_PORTS
-AsynchronousFileIO::Instance()->IncreaseUserCount();
-#endif
 
 peer->isRecvfromThreadActive=true;
 
@@ -3298,9 +3215,6 @@ break;
 #endif
 }
 
-#ifdef __USE_IO_COMPLETION_PORTS
-AsynchronousFileIO::Instance()->DecreaseUserCount();
-#endif
 
 peer->isRecvfromThreadActive=false;
 
@@ -4328,24 +4242,6 @@ bool RakPeer::RunUpdateCycle( void )
 
 							if (alreadyConnected==false)
 							{
-#ifdef __USE_IO_COMPLETION_PORTS
-								bool b;
-								// Create a new nonblocking socket
-								remoteSystem->reliabilityLayer.SetSocket( SocketLayer::Instance()->CreateBoundSocket( myPlayerId.port, false ) );
-
-								SocketLayer::Instance()->Connect( remoteSystem->reliabilityLayer.GetSocket(), playerId.binaryAddress, playerId.port );
-								// Associate our new socket with a completion port and do the first read
-								b = SocketLayer::Instance()->AssociateSocketWithCompletionPortAndRead( remoteSystem->reliabilityLayer.GetSocket(), playerId.binaryAddress, playerId.port, rakPeer );
-								//client->//reliabilityLayerMutex.Unlock();
-
-								if ( b == false )   // Some damn completion port error... windows is so unreliable
-								{
-#ifdef _DO_PRINTF
-									printf( "RakClient - AssociateSocketWithCompletionPortAndRead failed" );
-#endif
-									return ;
-								}
-#endif
 
 								remoteSystem->reliabilityLayer.SetEncryptionKey( 0 );
 							}
@@ -4417,10 +4313,6 @@ void* UpdateNetworkLoop( void* arguments )
 	RakPeer * rakPeer = ( RakPeer * ) arguments;
 	// RakNetTime time;
 
-#ifdef __USE_IO_COMPLETION_PORTS
-
-	AsynchronousFileIO::Instance()->IncreaseUserCount();
-#endif
 
 	// 11/15/05 - this is slower than Sleep()
 #ifdef _WIN32
@@ -4490,9 +4382,6 @@ void* UpdateNetworkLoop( void* arguments )
 	}
 
 
-#ifdef __USE_IO_COMPLETION_PORTS
-	AsynchronousFileIO::Instance()->DecreaseUserCount();
-#endif
 
 
 	/*
