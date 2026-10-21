@@ -39,16 +39,6 @@ RakServer::RakServer()
 RakServer::~RakServer()
 {}
 
-void RakServer::InitializeSecurity( const char *pubKeyE, const char *pubKeyN )
-{
-	RakPeer::InitializeSecurity( 0, 0, pubKeyE, pubKeyN );
-}
-
-void RakServer::DisableSecurity( void )
-{
-	RakPeer::DisableSecurity();
-}
-
 #ifdef _MSC_VER
 #pragma warning( disable : 4100 ) // warning C4100: 'depreciated' : unreferenced formal parameter
 #endif

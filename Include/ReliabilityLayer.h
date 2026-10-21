@@ -18,9 +18,6 @@
 #ifndef __RELIABILITY_LAYER_H
 #define __RELIABILITY_LAYER_H
 
-// for samp compatibility
-#define TEA_ENCRYPTOR
-
 #include "SocketLayer.h"
 #include "MTUSize.h"
 #include "DS_LinkedList.h"
@@ -30,13 +27,8 @@
 #include "BitStream.h"
 #include "InternalPacket.h"
 #include "InternalPacketPool.h"
-#ifdef TEA_ENCRYPTOR
 #include "TEABlockEncryptor.h"
-#else
-#include "DataBlockEncryptor.h"
-#endif
 #include "RakNetStatistics.h"
-#include "SHA1.h"
 #include "DS_OrderedList.h"
 #include "DS_RangeList.h"
 #include "DS_BPlusTree.h"
@@ -207,12 +199,6 @@ private:
 	/// Parse an internalPacket and figure out how many header bits would be written.  Returns that number
 	int GetBitStreamHeaderLength( const InternalPacket *const internalPacket );
 
-	/// Get the SHA1 code
-	void GetSHA1( unsigned char * const buffer, unsigned int nbytes, char code[ SHA1_LENGTH ] );
-
-	/// Check the SHA1 code
-	bool CheckSHA1( char code[ SHA1_LENGTH ], unsigned char * const buffer, unsigned int nbytes );
-
 	/// Search the specified list for sequenced packets on the specified ordering channel, optionally skipping those with splitPacketId, and delete them
 	void DeleteSequencedPacketsInList( unsigned char orderingChannel, DataStructures::List<InternalPacket*>&theList, int splitPacketId = -1 );
 
@@ -336,11 +322,7 @@ private:
 	double availableBandwidth;
 	bool continuousSend;
 
-#ifdef TEA_ENCRYPTOR
 	TEABlockEncryptor encryptor;
-#else
-	DataBlockEncryptor encryptor;
-#endif
 	unsigned sendPacketCount, receivePacketCount;
 	RakNetTimeNS ackTimeIncrement;
 

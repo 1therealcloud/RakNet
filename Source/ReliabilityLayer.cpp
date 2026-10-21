@@ -1014,7 +1014,7 @@ bool ReliabilityLayer::Send( char *data, int numberOfBitsToSend, PacketPriority 
 
 	if ( splitPacket )   // If it uses a secure header it will be generated here
 	{
-		// Must split the packet.  This will also generate the SHA1 if it is required. It also adds it to the send list.
+		// Must split the packet. It also adds it to the send list.
 		//InternalPacket packetCopy;
 		//memcpy(&packetCopy, internalPacket, sizeof(InternalPacket));
 		//sendPacketSet[priority].CancelWriteLock(internalPacket);
@@ -2031,36 +2031,6 @@ InternalPacket* ReliabilityLayer::CreateInternalPacketFromBitStream( RakNet::Bit
 	//  printf("Received %s\n",internalPacket->data);
 
 	return internalPacket;
-}
-
-//-------------------------------------------------------------------------------------------------------
-// Get the SHA1 code
-//-------------------------------------------------------------------------------------------------------
-void ReliabilityLayer::GetSHA1( unsigned char * const buffer, unsigned int
-				nbytes, char code[ SHA1_LENGTH ] )
-{
-	CSHA1 sha1;
-
-	sha1.Reset();
-	sha1.Update( ( unsigned char* ) buffer, nbytes );
-	sha1.Final();
-	memcpy( code, sha1.GetHash(), SHA1_LENGTH );
-}
-
-//-------------------------------------------------------------------------------------------------------
-// Check the SHA1 code
-//-------------------------------------------------------------------------------------------------------
-bool ReliabilityLayer::CheckSHA1( char code[ SHA1_LENGTH ], unsigned char *
-				  const buffer, unsigned int nbytes )
-{
-	char code2[ SHA1_LENGTH ];
-	GetSHA1( buffer, nbytes, code2 );
-
-	for ( int i = 0; i < SHA1_LENGTH; i++ )
-		if ( code[ i ] != code2[ i ] )
-			return false;
-
-	return true;
 }
 
 //-------------------------------------------------------------------------------------------------------

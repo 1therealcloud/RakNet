@@ -55,14 +55,6 @@ public:
 	/// \param[in] orderingChannel If blockDuration > 0, the disconnect packet will be sent on this channel
 	void Disconnect( unsigned int blockDuration, unsigned char orderingChannel=0 );
 	
-    /// Can be called to use specific public RSA keys. (e and n)
-	/// In order to prevent altered keys.
-	/// Will return ID_RSA_PUBLIC_KEY_MISMATCH in a packet if a key has been altered.
-	/// \param[in] privKeyP Private keys generated from the RSACrypt class. Can be 0
-	/// \param[in] privKeyQ Private keys generated from the RSACrypt class. Can be 0 
-	/// \sa Encryption.cpp	
-	void InitializeSecurity( const char *privKeyP, const char *privKeyQ );
-	
 	/// Set the password to use when connecting to a server.  The password persists between connections.
 	/// \param[in] _password The password to use to connect to a server, or 0 for none.
 	void SetPassword( const char *_password );

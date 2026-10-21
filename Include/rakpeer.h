@@ -22,7 +22,6 @@
 #include "RakPeerInterface.h"
 #include "ReliabilityLayer.h"
 #include "RPCNode.h"
-#include "RSACrypt.h"
 #include "BitStream.h"
 #include "SingleProducerConsumer.h"
 #include "RPCMap.h"
@@ -60,21 +59,6 @@ public:
 	/// \param[in] forceHostAddress Can force RakNet to use a particular IP to host on.  Pass 0 to automatically pick an IP
 	/// \return False on failure (can't create socket or thread), true on success.
 	bool Initialize( unsigned short maxConnections, unsigned short localPort, int _threadSleepTimer, const char *forceHostAddress=0 );
-
-	/// Secures connections though a combination of SHA1, AES128, SYN Cookies, and RSA to prevent connection spoofing, replay attacks, data eavesdropping, packet tampering, and MitM attacks.
-	/// There is a significant amount of processing and a slight amount of bandwidth overhead for this feature.
-	/// If you accept connections, you must call this or else secure connections will not be enabled for incoming connections.
-	/// If you are connecting to another system, you can call this with values for the (e and p,q) public keys before connecting to prevent MitM
-	/// \pre Must be called before Initialize
-	/// \param[in] pubKeyE A pointer to the public keys from the RSACrypt class.  
-	/// \param[in] pubKeyN A pointer to the public keys from the RSACrypt class. 
-	/// \param[in] privKeyP Public key generated from the RSACrypt class.  
-	/// \param[in] privKeyQ Public key generated from the RSACrypt class.  If the private keys are 0, then a new key will be generated when this function is called@see the Encryption sample
-	void InitializeSecurity(const char *pubKeyE, const char *pubKeyN, const char *privKeyP, const char *privKeyQ );
-
-	/// Disables all security.
-	/// \note Must be called while offline
-	void DisableSecurity( void );
 
 	/// Sets how many incoming connections are allowed. If this is less than the number of players currently connected,
 	/// no more players will be allowed to connect.  If this is greater than the maximum number of peers allowed,
@@ -498,10 +482,8 @@ public:
 		RakNetTime lastReliableSend; /// When did the last reliable send occur.  Reliable sends must occur at least once every timeoutTime/2 units to notice disconnects
 		RakNet::BitStream staticData; /// static data.  This cannot be a pointer because it might be accessed in another thread.
 		RakNetTime connectionTime; /// connection time, if active.
-		unsigned char AESKey[ 16 ]; /// Security key.
-		bool setAESKey; /// true if security is enabled.
 		RPCMap rpcMap; /// Mapping of RPC calls to single byte integers to save transmission bandwidth.
-		enum ConnectMode {NO_ACTION, DISCONNECT_ASAP, DISCONNECT_ASAP_SILENTLY, DISCONNECT_ON_NO_ACK, REQUESTED_CONNECTION, HANDLING_CONNECTION_REQUEST, UNVERIFIED_SENDER, SET_ENCRYPTION_ON_MULTIPLE_16_BYTE_PACKET, CONNECTED} connectMode;
+		enum ConnectMode {NO_ACTION, DISCONNECT_ASAP, DISCONNECT_ASAP_SILENTLY, DISCONNECT_ON_NO_ACK, REQUESTED_CONNECTION, HANDLING_CONNECTION_REQUEST, UNVERIFIED_SENDER, CONNECTED} connectMode;
 
 		// for samp compatibility: keep three private state bytes
 		unsigned char remoteStateBytes[3];
@@ -535,7 +517,7 @@ protected:
 	///Parse out a connection request packet
 	void ParseConnectionRequestPacket( RakPeer::RemoteSystemStruct *remoteSystem, PlayerID playerId, const char *data, int byteSize);
 	///When we get a connection request from an ip / port, accept it unless full
-	void OnConnectionRequest( RakPeer::RemoteSystemStruct *remoteSystem, unsigned char *AESKey, bool setAESKey );
+	void OnConnectionRequest( RakPeer::RemoteSystemStruct *remoteSystem );
 	/// Send a disconnect notification and flag disconnection.
 	void NotifyAndFlagForDisconnect( const PlayerID playerId, bool performImmediate, unsigned char orderingChannel );
 	///Returns how many remote systems initiated a connection to us
@@ -682,9 +664,6 @@ protected:
 	unsigned int rawBytesSent, rawBytesReceived, compressedBytesSent, compressedBytesReceived;
 	// void DecompressInput(RakNet::BitStream *bitStream);
 	// void UpdateOutgoingFrequencyTable(RakNet::BitStream * bitStream);
-	void GenerateSYNCookieRandomNumber( void );
-	void SecuredConnectionResponse( const PlayerID playerId );
-	void SecuredConnectionConfirmation( RakPeer::RemoteSystemStruct * remoteSystem, char* data );
 	bool RunUpdateCycle( void );
 	// void RunMutexedUpdateCycle(void);
 
@@ -754,15 +733,6 @@ protected:
 	unsigned short _minExtraPing, _extraPingVariance;
 #endif
 
-#if !defined(_COMPATIBILITY_1)
-	/// Encryption and security
-	big::RSACrypt<RSA_BIT_SIZE> rsacrypt;
-	big::u32 publicKeyE;
-	RSA_BIT_SIZE publicKeyN;
-	bool keysLocallyGenerated, usingSecurity;
-	RakNetTime randomNumberExpirationTime;
-	unsigned char newRandomNumber[ 20 ], oldRandomNumber[ 20 ];
-#endif
     
 	///How long it has been since things were updated by a call to receiveUpdate thread uses this to determine how long to sleep for
 	//unsigned int lastUserUpdateCycle;

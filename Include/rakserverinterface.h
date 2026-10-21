@@ -45,15 +45,6 @@ public:
 	/// \return true on successful initiation, false otherwise
 	virtual bool Start( unsigned short AllowedPlayers, unsigned int depreciated, int threadSleepTimer, unsigned short port, const char *forceHostAddress=0 )=0;
 	
-	/// Must be called while offlineSecures connections though a combination of SHA1, AES128, SYN Cookies, and RSA to preventconnection spoofing, replay attacks, data eavesdropping, packet tampering, and MitM attacks.There is a significant amount of processing and a slight amount of bandwidthoverhead for this feature.If you accept connections, you must call this or else secure connections will not be enabledfor incoming connections. If the private keys are 0, then a new key will be generated when this function is called@see the Encryption sample
-	/// \param[in] privateKeyE A pointer to the public keys from the RSACrypt class.  
-	/// \param[in] privateKeyN A pointer to the public keys from the RSACrypt class. 
-	virtual void InitializeSecurity( const char *privateKeyE, const char *privateKeyN )=0;
-
-	/// Disables all security.
-	/// \pre Must be called while offline
-	virtual void DisableSecurity( void )=0;
-	
 	/// Set the password clients have to use to connect to this server. The password persists between connections.
 	/// Pass 0 for no password.  You can call this anytime
 	/// \param[in] _password The password string, or 0 for none.

@@ -24,9 +24,7 @@
 #include "RakPeer.h"
 #include "ConsoleServer.h"
 #include "PacketLogger.h"
-#include "RakNetCommandParser.h"
 #include "ReplicaManager.h"
-#include "RakNetTransport.h"
 #include "TelnetTransport.h"
 #include "PacketConsoleLogger.h"
 #include "PacketFileLogger.h"
@@ -60,14 +58,6 @@ LogCommandParser* RakNetworkFactory::GetLogCommandParser( void )
 PacketLogger* RakNetworkFactory::GetPacketLogger( void )
 {
 	return new PacketLogger;
-}
-RakNetCommandParser* RakNetworkFactory::GetRakNetCommandParser( void )
-{
-	return new RakNetCommandParser;
-}
-RakNetTransport* RakNetworkFactory::GetRakNetTransport( void )
-{
-	return new RakNetTransport;
 }
 TelnetTransport* RakNetworkFactory::GetTelnetTransport( void )
 {
@@ -116,14 +106,6 @@ void RakNetworkFactory::DestroyLogCommandParser( LogCommandParser* i)
 void RakNetworkFactory::DestroyPacketLogger( PacketLogger* i)
 {
 	delete ( PacketLogger* ) i;
-}
-void RakNetworkFactory::DestroyRakNetCommandParser( RakNetCommandParser* i )
-{
-	delete ( RakNetCommandParser* ) i;
-}
-void RakNetworkFactory::DestroyRakNetTransport(  RakNetTransport* i )
-{
-	delete ( RakNetTransport* ) i;
 }
 void RakNetworkFactory::DestroyTelnetTransport(  TelnetTransport* i )
 {
