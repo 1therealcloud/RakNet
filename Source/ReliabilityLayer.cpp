@@ -34,8 +34,8 @@
 
 static const int DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE=512;
 static const float PACKETLOSS_TOLERANCE=.02f; // What percentile packetloss we are willing to accept as background noise.
-static const double MINIMUM_SEND_BPS=14400.0; // Won't go below this send rate
-static const double STARTING_SEND_BPS=28800.0; // What send rate to start at.
+static const double MINIMUM_SEND_BPS=144400.0; // Won't go below this send rate
+static const double STARTING_SEND_BPS=512000.0; // What send rate to start at.
 static const float PING_MULTIPLIER_TO_RESEND=3.0; // So internet ping variation doesn't cause needless resends
 static const RakNetTime MIN_PING_TO_RESEND=30; // So system timer changes and CPU lag don't send needless resends
 static const RakNetTimeNS TIME_TO_NEW_SAMPLE=500000; // How many ns to wait before starting a new sample.  This way buffers have time to overflow or relax at the new send rate, if they are indeed going to overflow.
@@ -183,6 +183,13 @@ void ReliabilityLayer::InitializeVariables( void )
 	memset( waitingForSequencedPacketWriteIndex, 0, NUMBER_OF_ORDERED_STREAMS * sizeof(OrderingIndexType) );
 	memset( &statistics, 0, sizeof( statistics ) );
 	statistics.connectionStartTime = RakNet::GetTime();
+	statistics.field_110 = RakNet::GetTime();
+	statistics.field_114 = 0;
+	statistics.field_118 = 0;
+	statistics.field_11C = RakNet::GetTime();
+	statistics.field_120 = 0;
+	statistics.field_124 = 0;
+	reliabilitySizeInBits = 4;
 	splitPacketId = 0;
 	messageNumber = 0;
 	availableBandwidth=0;
@@ -204,6 +211,13 @@ void ReliabilityLayer::InitializeVariables( void )
 	histogramReceiveMarker=0;
 	noPacketlossIncreaseCount=0;
 	nextAckTime=statistics.connectionStartTime;
+
+    ackWindowStart = 0;
+    ackWindowCount = 0;
+    ackPreviousCount = 0;
+    messageWindowStart = 0;
+    messageWindowCount = 0;
+    messagePreviousCount = 0;
 
 	receivedPacketsBaseIndex=0;
 	resetReceivedPackets=true;
@@ -329,11 +343,14 @@ void ReliabilityLayer::FreeThreadSafeMemory( void )
 // because some data is used internally, such as packet acknowledgement and
 //split packets
 //-------------------------------------------------------------------------------------------------------
-bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize )
+bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize, bool *protocolViolation )
 {
 #ifdef _DEBUG
 	assert( !( length <= 0 || buffer == 0 ) );
 #endif
+
+	if (protocolViolation)
+		*protocolViolation = false;
 
 	if ( length <= 1 || buffer == 0 )   // Length of 1 is a connection request resend that we just ignore
 		return true;
@@ -369,6 +386,8 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 
 	RakNet::BitStream socketData( (unsigned char*) buffer, length, false ); // Convert the incoming data to a bitstream for easy parsing
 	time = RakNet::GetTimeNS();
+    // share one receive timestamp for this datagram.
+    const RakNetTime receiveTime = protocolViolation ? RakNet::GetTime() : 0;
 
 	DataStructures::RangeList<MessageNumberType> incomingAcks;
 	socketData.Read(hasAcks);
@@ -385,6 +404,18 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				return false;
 			}
 
+            // original ack range statistic excludes the final endpoint.
+            statistics.acknowlegementsReceived +=
+                (unsigned)(incomingAcks.ranges[i].maxIndex - incomingAcks.ranges[i].minIndex);
+
+            // for samp compatibility: enforce the ACK limit
+            if (protocolViolation &&
+                (int)(incomingAcks.ranges[i].maxIndex - incomingAcks.ranges[i].minIndex) > 3000)
+            {
+                *protocolViolation = true;
+                return true;
+            }
+
 			for (messageNumber=incomingAcks.ranges[i].minIndex; messageNumber >= incomingAcks.ranges[i].minIndex && messageNumber <= incomingAcks.ranges[i].maxIndex; messageNumber++)
 			{
 				hasAcks=true;
@@ -392,6 +423,9 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				// SHOW - ack received
 				//printf("Got Ack for %i. resendList.Size()=%i sendQueue[0].Size() = %i\n",internalPacket->messageNumber, resendList.Size(), sendQueue[0].Size());
 				ackedHistogramCounter=RemovePacketFromResendListAndDeleteOlderReliableSequenced( messageNumber, time );
+
+                if (protocolViolation)
+                    ++ackWindowCount;
 
 #ifdef _DEBUG_LOGGER
 				{
@@ -416,6 +450,22 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 					lastAckTime = time; // Just got an ack.  Record when we got it so we know the connection is alive
 				}
 			}
+
+            // check the previous ack window, not the current burst.
+            if (protocolViolation)
+            {
+                if ((RakNetTime)(receiveTime - ackWindowStart) > 1000)
+                {
+                    ackWindowStart = receiveTime;
+                    ackPreviousCount = ackWindowCount;
+                    ackWindowCount = 0;
+                }
+                if (ackPreviousCount > 3000)
+                {
+                    *protocolViolation = true;
+                    return true;
+                }
+            }
 		}
 	}
 
@@ -454,6 +504,19 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				receivedPacketsBaseIndex=0;
 				resetReceivedPackets=false;
 			}
+
+            // for samp compatibility: use a signed 16-bit sequence gap
+            if (protocolViolation)
+            {
+                const short gap = (short)(internalPacket->messageNumber - receivedPacketsBaseIndex);
+                if (gap > 3000 || gap < -3000)
+                {
+                    delete [] internalPacket->data;
+                    internalPacketPool.ReleasePointer(internalPacket);
+                    *protocolViolation = true;
+                    return true;
+                }
+            }
 
 			// If the following conditional is true then this either a duplicate packet
 			// or an older out of order packet
@@ -519,6 +582,23 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 			}
 
 			statistics.messagesReceived++;
+
+            // check the previous one-second message window.
+            if (protocolViolation)
+            {
+                ++messageWindowCount;
+                if ((RakNetTime)(receiveTime - messageWindowStart) > 1000)
+                {
+                    messageWindowStart = receiveTime;
+                    messagePreviousCount = messageWindowCount;
+                    messageWindowCount = 0;
+                }
+                if (messagePreviousCount > 500)
+                {
+                    *protocolViolation = true;
+                    return true;
+                }
+            }
 
 			// If the allocated buffer is > DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE and it is 3x greater than the number of elements actually being used
 			if (hasReceivedPacketQueue.AllocationSize() > (unsigned int) DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE && hasReceivedPacketQueue.AllocationSize() > hasReceivedPacketQueue.Size() * 3)
@@ -890,7 +970,7 @@ bool ReliabilityLayer::Send( char *data, int numberOfBitsToSend, PacketPriority 
 	int maxDataSize = MTUSize - UDP_HEADER_SIZE - headerLength;
 
 	if ( encryptor.IsKeySet() )
-		maxDataSize -= 16; // Extra data for the encryptor
+		maxDataSize -= 8; // for samp compatibility: 8-byte blocks
 
 	bool splitPacket = numberOfBytesToSend > maxDataSize;
 
@@ -1194,10 +1274,14 @@ void ReliabilityLayer::SendBitStream( SOCKET s, PlayerID playerId, RakNet::BitSt
 		length = bitStream->GetNumberOfBytesUsed();
 		oldLength = length;
 
+		// TEA prepends two bytes and pads to an eight-byte boundary.
+		// Reserve before the in-place shift, without changing the payload bits.
+		const int encryptedLength = (length + 2 + 7) & ~7;
+		bitStream->AddBitsAndReallocate((encryptedLength - length) * 8);
 		encryptor.Encrypt( ( unsigned char* ) bitStream->GetData(), length, ( unsigned char* ) bitStream->GetData(), &length );
 		statistics.encryptionBitsSent = ( length - oldLength ) * 8;
 
-		assert( ( length % 16 ) == 0 );
+		assert( length == encryptedLength && ( length % 8 ) == 0 );
 	}
 	else
 	{
@@ -1244,7 +1328,7 @@ unsigned ReliabilityLayer::GenerateDatagram( RakNet::BitStream *output, int MTUS
 	maxDataBitSize = MTUSize - UDP_HEADER_SIZE;
 
 	if ( encryptor.IsKeySet() )
-		maxDataBitSize -= 16; // Extra data for the encryptor
+		maxDataBitSize -= 8; // for samp compatibility: 8-byte blocks
 
 	maxDataBitSize <<= 3;
 
@@ -1258,7 +1342,7 @@ unsigned ReliabilityLayer::GenerateDatagram( RakNet::BitStream *output, int MTUS
 			messagesSent++;
 			statistics.acknowlegementBitsSent +=acknowlegements.Serialize(output, (MTUSize-UDP_HEADER_SIZE)*8-1, true);
 			if (acknowlegements.Size()==0)
-				nextAckTime=time+(RakNetTimeNS)(ping*(RakNetTime)(PING_MULTIPLIER_TO_RESEND/4.0f));
+				nextAckTime=time; // for samp compatibility: no ping delay
 			else
 			{
 			//	printf("Ack full\n");
@@ -1269,7 +1353,7 @@ unsigned ReliabilityLayer::GenerateDatagram( RakNet::BitStream *output, int MTUS
 		else
 		{
 			writeFalseToHeader=true;
-			nextAckTime=time+(RakNetTimeNS)(ping*(RakNetTime)(PING_MULTIPLIER_TO_RESEND/4.0f));
+			nextAckTime=time; // for samp compatibility: no ping delay
 		}
 	}
 	else
@@ -1608,9 +1692,10 @@ int ReliabilityLayer::GetBitStreamHeaderLength( const InternalPacket *const inte
 
 	bitLength=sizeof(MessageNumberType)*2*8;
 
-	// Write the PacketReliability.  This is encoded in 3 bits
-	//bitStream->WriteBits((unsigned char*)&(internalPacket->reliability), 3, true);
-	bitLength += 3;
+	// for samp compatibility
+	// Write the PacketReliability.  This is encoded in 4 bits
+	//bitStream->WriteBits((unsigned char*)&(internalPacket->reliability), 4, true);
+	bitLength += reliabilitySizeInBits;
 
 	// If the reliability requires an ordering channel and ordering index, we Write those.
 	if ( internalPacket->reliability == UNRELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_ORDERED )
@@ -1683,8 +1768,9 @@ int ReliabilityLayer::WriteToBitStreamFromInternalPacket( RakNet::BitStream *bit
 	assert( internalPacket->dataBitLength > 0 );
 #endif
 
-	// Write the PacketReliability.  This is encoded in 3 bits
-	bitStream->WriteBits( (const unsigned char *)&c, 3, true );
+	// for samp compatibility
+	// Write the PacketReliability.  This is encoded in 4 bits
+	bitStream->WriteBits( (const unsigned char *)&c, reliabilitySizeInBits, true );
 
 	// If the reliability requires an ordering channel and ordering index, we Write those.
 	if ( internalPacket->reliability == UNRELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_SEQUENCED || internalPacket->reliability == RELIABLE_ORDERED )
@@ -1773,10 +1859,11 @@ InternalPacket* ReliabilityLayer::CreateInternalPacketFromBitStream( RakNet::Bit
 		return 0;
 	}
 
-	// Read the PacketReliability. This is encoded in 3 bits
+	// for samp compatibility
+	// Read the PacketReliability. This is encoded in 4 bits
 	unsigned char reliability;
 
-	bitStreamSucceeded = bitStream->ReadBits( ( unsigned char* ) ( &( reliability ) ), 3 );
+	bitStreamSucceeded = bitStream->ReadBits( ( unsigned char* ) ( &( reliability ) ), reliabilitySizeInBits );
 
 	internalPacket->reliability = ( const PacketReliability ) reliability;
 
@@ -1785,7 +1872,8 @@ InternalPacket* ReliabilityLayer::CreateInternalPacketFromBitStream( RakNet::Bit
 	// assert( bitStreamSucceeded );
 #endif
 
-	if ( bitStreamSucceeded == false )
+	// for samp compatibility: reject reliability values 0..5
+	if ( reliability < UNRELIABLE || bitStreamSucceeded == false )
 	{
 		internalPacketPool.ReleasePointer( internalPacket );
 		return 0;
@@ -2071,7 +2159,7 @@ void ReliabilityLayer::SplitPacket( InternalPacket *internalPacket, int MTUSize 
 	maxDataSize = MTUSize - UDP_HEADER_SIZE;
 
 	if ( encryptor.IsKeySet() )
-		maxDataSize -= 16; // Extra data for the encryptor
+		maxDataSize -= 8; // for samp compatibility: 8-byte blocks
 
 #ifdef _DEBUG
 	// Make sure we need to split the packet to begin with
@@ -2464,7 +2552,7 @@ void ReliabilityLayer::UpdateNextActionTime(void)
 //-------------------------------------------------------------------------------------------------------
 // Statistics
 //-------------------------------------------------------------------------------------------------------
-RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( void )
+RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( bool includeResendListDataSize )
 {
 	unsigned i;
 
@@ -2482,7 +2570,10 @@ RakNetStatisticsStruct * const ReliabilityLayer::GetStatistics( void )
 	statistics.bitsPerSecond = currentBandwidth;
 	//statistics.lossySize = lossyWindowSize == MAXIMUM_WINDOW_SIZE + 1 ? 0 : lossyWindowSize;
 //	statistics.lossySize=0;
-	statistics.messagesOnResendQueue = GetResendListDataSize();
+	if (!includeResendListDataSize)
+		statistics.messagesOnResendQueue = GetResendListDataSize();
+	else
+		statistics.messagesOnResendQueue = 0;
 
 	return &statistics;
 }

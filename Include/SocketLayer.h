@@ -74,6 +74,15 @@ public:
 	/// \return A new socket used for accepting clients 
 	SOCKET CreateBoundSocket( unsigned short port, bool blockingSocket, const char *forceHostAddress );
 
+	// for samp compatibility
+	void SetDatagramPort( unsigned short port );
+	void SetServerDatagramMode(bool serverMode);
+    bool IsServerDatagramMode() const;
+
+    // raw query handler on the receive thread
+    typedef bool (*QueryHandler)(SOCKET, const char*, int, const sockaddr_in&);
+    void SetQueryHandler(QueryHandler handler);
+
 	#if !defined(_COMPATIBILITY_1)
 	const char* DomainNameToIP( const char *domainName );
 	#endif
@@ -130,6 +139,11 @@ public:
 	unsigned short GetLocalPort ( SOCKET s );
 private:
 	
+	// for samp compatibility
+	static unsigned short datagramPortKey;
+	static bool serverDatagramMode;
+    static QueryHandler queryHandler;
+
 	static bool socketLayerStarted;
 #ifdef _WIN32
 	static WSADATA winsockInfo;

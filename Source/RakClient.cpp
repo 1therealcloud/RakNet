@@ -43,6 +43,7 @@ RakClient::~RakClient()
 bool RakClient::Connect( const char* host, unsigned short serverPort, unsigned short clientPort, unsigned int depreciated, int threadSleepTimer )
 {
 	RakPeer::Disconnect( 100 );
+	SocketLayer::Instance()->SetServerDatagramMode(false);
 	
 	RakPeer::Initialize( 1, clientPort, threadSleepTimer );
 	
@@ -350,22 +351,23 @@ bool RakClient::DeleteCompressionLayer( bool inputLayer )
 	return RakPeer::DeleteCompressionLayer( inputLayer );
 }
 
-void RakClient::RegisterAsRemoteProcedureCall( char* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
+// for samp compatibility
+void RakClient::RegisterAsRemoteProcedureCall( int* uniqueID, void ( *functionPointer ) ( RPCParameters *rpcParms ) )
 {
 	RakPeer::RegisterAsRemoteProcedureCall( uniqueID, functionPointer );
 }
 
-void RakClient::RegisterClassMemberRPC( char* uniqueID, void *functionPointer )
+void RakClient::RegisterClassMemberRPC( int* uniqueID, void *functionPointer )
 {
 	RakPeer::RegisterClassMemberRPC( uniqueID, functionPointer );
 }
 
-void RakClient::UnregisterAsRemoteProcedureCall( char* uniqueID )
+void RakClient::UnregisterAsRemoteProcedureCall( int* uniqueID )
 {
 	RakPeer::UnregisterAsRemoteProcedureCall( uniqueID );
 }
 
-bool RakClient::RPC( char* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+bool RakClient::RPC( int* uniqueID, const char *data, unsigned int bitLength, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
 	if ( remoteSystemList == 0 )
 		return false;
@@ -373,12 +375,22 @@ bool RakClient::RPC( char* uniqueID, const char *data, unsigned int bitLength, P
 	return RakPeer::RPC( uniqueID, data, bitLength, priority, reliability, orderingChannel, remoteSystemList[ 0 ].playerId, false, shiftTimestamp, networkID, replyFromTarget );
 }
 
-bool RakClient::RPC( char* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
+bool RakClient::RPC( int* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool shiftTimestamp, NetworkID networkID, RakNet::BitStream *replyFromTarget )
 {
 	if ( remoteSystemList == 0 )
 		return false;
 		
 	return RakPeer::RPC( uniqueID, parameters, priority, reliability, orderingChannel, remoteSystemList[ 0 ].playerId, false, shiftTimestamp, networkID, replyFromTarget );
+}
+
+
+// for samp compatibility
+bool RakClient::RPC( int* uniqueID, RakNet::BitStream *parameters, PacketPriority priority, PacketReliability reliability, char orderingChannel, bool shiftTimestamp )
+{
+	if ( remoteSystemList == 0 )
+		return false;
+
+	return RakPeer::RPC( uniqueID, parameters, priority, reliability, orderingChannel, remoteSystemList[ 0 ].playerId, false, shiftTimestamp, UNASSIGNED_NETWORK_ID, 0 );
 }
 
 void RakClient::SetTrackFrequencyTable( bool b )

@@ -18,6 +18,9 @@
 #ifndef __RELIABILITY_LAYER_H
 #define __RELIABILITY_LAYER_H
 
+// for samp compatibility
+#define TEA_ENCRYPTOR
+
 #include "SocketLayer.h"
 #include "MTUSize.h"
 #include "DS_LinkedList.h"
@@ -27,7 +30,11 @@
 #include "BitStream.h"
 #include "InternalPacket.h"
 #include "InternalPacketPool.h"
+#ifdef TEA_ENCRYPTOR
+#include "TEABlockEncryptor.h"
+#else
 #include "DataBlockEncryptor.h"
+#endif
 #include "RakNetStatistics.h"
 #include "SHA1.h"
 #include "DS_OrderedList.h"
@@ -98,7 +105,7 @@ public:
 	/// \param[in] MTUSize maximum datagram size
 	/// \retval true Success
 	/// \retval false Modified packet
-	bool HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize );
+	bool HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize, bool *protocolViolation = 0 );
 
 	/// This allocates bytes and writes a user-level message to those bytes.
 	/// \param[out] data The message
@@ -142,7 +149,7 @@ public:
 
 	/// Get Statistics
 	/// \return A pointer to a static struct, filled out with current statistical information.
-	RakNetStatisticsStruct * const GetStatistics( void );
+	RakNetStatisticsStruct * const GetStatistics( bool includeResendListDataSize );
 
 	///Are we waiting for any data to be sent out or be processed by the player?
 	bool IsDataWaiting(void);
@@ -305,6 +312,7 @@ private:
 //	unsigned int *receivedPackets;
 	unsigned int blockWindowIncreaseUntilTime;
 	RakNetStatisticsStruct statistics;
+	unsigned int reliabilitySizeInBits;
 
 	/// Memory-efficient receivedPackets algorithm:
 	/// receivedPacketsBaseIndex is the packet number we are expecting
@@ -328,9 +336,21 @@ private:
 	double availableBandwidth;
 	bool continuousSend;
 
+#ifdef TEA_ENCRYPTOR
+	TEABlockEncryptor encryptor;
+#else
 	DataBlockEncryptor encryptor;
+#endif
 	unsigned sendPacketCount, receivePacketCount;
 	RakNetTimeNS ackTimeIncrement;
+
+    // for samp compatibility: receive-window counters
+    RakNetTime ackWindowStart;
+    unsigned int ackWindowCount;
+    unsigned int ackPreviousCount;
+    RakNetTime messageWindowStart;
+    unsigned int messageWindowCount;
+    unsigned int messagePreviousCount;
 
 #ifdef __USE_IO_COMPLETION_PORTS
 	///\note Windows Port only

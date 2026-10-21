@@ -21,13 +21,14 @@
 #define __RPC_MAP
 
 #include "RPCNode.h"
-#include "DS_List.h"
 #include "NetworkTypes.h"
 #include "Export.h"
 
 /// \ingroup RAKNET_RPC 
 /// \internal
-/// \brief A container class for a list of RPCNodes
+/// \brief RPC dispatch table for samp compatibility.
+///
+/// Handlers are indexed by a one-byte RPC id.
 struct RAK_DLL_EXPORT RPCMap
 {
 public:
@@ -35,13 +36,13 @@ public:
 	~RPCMap();
 	void Clear(void);
     RPCNode *GetNodeFromIndex(RPCIndex index);
-	RPCNode *GetNodeFromFunctionName(char *uniqueIdentifier);
-	RPCIndex GetIndexFromFunctionName(char *uniqueIdentifier);
-	void AddIdentifierWithFunction(char *uniqueIdentifier, void *functionPointer, bool isPointerToMember);
-	void AddIdentifierAtIndex(char *uniqueIdentifier, RPCIndex insertionIndex);
-	void RemoveNode(char *uniqueIdentifier);
+	RPCNode *GetNodeFromFunctionName(int *uniqueIdentifier);
+	RPCIndex GetIndexFromFunctionName(int *uniqueIdentifier);
+	void AddIdentifierWithFunction(int *uniqueIdentifier, void *functionPointer, bool isPointerToMember);
+	void AddIdentifierAtIndex(RPCIndex insertionIndex);
+	void RemoveNode(int *uniqueIdentifier);
 protected:
-	DataStructures::List<RPCNode *> rpcSet;
+	RPCNode *rpcSet[256];
 };
 
 #endif

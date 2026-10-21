@@ -51,6 +51,9 @@ typedef unsigned int RakNetTime;
 typedef long long RakNetTimeNS;
 #endif
 
+// for samp compatibility: pack public network and RPC structures
+#pragma pack(push, 1)
+
 /// \brief Unique identifier for a system.
 /// Corresponds to a network address
 struct RAK_DLL_EXPORT PlayerID
@@ -157,6 +160,9 @@ struct RPCParameters
 	/// If your send is not reliable, it will block for triple the ping time, or until you are disconnected, or you get a reply, whichever is first.
 	RakNet::BitStream *replyToSender;
 };
+
+// for samp compatibility: pack public network and RPC structures
+#pragma pack(pop)
 
 ///  Index of an unassigned player
 const PlayerIndex UNASSIGNED_PLAYER_INDEX = 65535;
