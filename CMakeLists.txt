@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.16)
+project(RakNet LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(RAKNET_BUILD_SAMPLES "Build examples" ON)
+
+file(GLOB RAKNET_SOURCES CONFIGURE_DEPENDS "Source/*.cpp")
+add_library(RakNet STATIC ${RAKNET_SOURCES})
+target_include_directories(RakNet PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include")
+
+if(WIN32)
+    target_link_libraries(RakNet PUBLIC ws2_32 winmm)
+else()
+    find_package(Threads REQUIRED)
+    target_link_libraries(RakNet PUBLIC Threads::Threads)
+endif()
+
+if(RAKNET_BUILD_SAMPLES)
+    function(raknet_sample name)
+        add_executable(${name} ${ARGN})
+        target_link_libraries(${name} PRIVATE RakNet)
+    endfunction()
+
+    raknet_sample(BigPacketTest "Samples/BigPacketTest/BigPacketTest.cpp")
+    raknet_sample(BitStream "Samples/BitStream/BitStreamSample.cpp")
+    raknet_sample(DroppedConnectionTest "Samples/Dropped Connection Test/DroppedConnectionTest.cpp")
+    raknet_sample(ReliableOrderedTest "Samples/Reliable Ordered Test/ReliableOrderedTest.cpp")
+    raknet_sample(RPC "Samples/Remote Procedure Calls/RPC.cpp")
+    raknet_sample(QueryServer "Samples/Query/server.cpp" "Samples/Query/Query.cpp")
+    raknet_sample(RCONServer "Samples/RCON/server.cpp" "Samples/Query/Query.cpp")
+
+    add_executable(QueryClient "Samples/Query/client.cpp")
+    add_executable(RCONClient "Samples/RCON/client.cpp")
+    if(WIN32)
+        target_link_libraries(QueryClient PRIVATE ws2_32)
+        target_link_libraries(RCONClient PRIVATE ws2_32)
+    endif()
+endif()
