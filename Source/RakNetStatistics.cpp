@@ -19,7 +19,7 @@
 #include "BitStream.h" // BITS_TO_BYTES
 #include "GetTime.h"
 
-// Verbosity level currently supports 0 (low), 1 (medium), 2 (high)
+// Verbosity supports 0 (low), 1 (medium), 2 (high), 4 (SA-MP client detail)
 // Buffer must be hold enough to hold the output string.  See the source to get an idea of how many bytes will be output
 void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityLevel )
 {
@@ -86,6 +86,25 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			bpsSent / 1000.0,
 			bpsReceived / 1000.0);
 	}
+
+    else if (verbosityLevel == 4)
+    {
+        // sa-mp StatisticsToString
+		// entry 0x100360D0
+        // mode4 branch 0x1003689D
+		// byte counters round up before truncation.
+        double packetLoss = (double)((long double)s->messagesTotalBitsResent * 100.0L / (long double)s->totalBitsSent);
+        sprintf(buffer, "Messages in Send buffer: %u\nMessages sent: %u\nBytes sent: %u\nAcks sent: %u\nAcks in send buffer: %u\nMessages waiting for ack: %u\nMessages resent: %u\nBytes resent: %u\nPacketloss: %.1f%%\nMessages received: %u\nBytes received: %u\nAcks received: %u\nDuplicate acks received: %u\n",
+            s->messageSendBuffer[0]+s->messageSendBuffer[1]+s->messageSendBuffer[2]+s->messageSendBuffer[3],
+            s->messagesSent[0]+s->messagesSent[1]+s->messagesSent[2]+s->messagesSent[3],
+            (unsigned)((s->totalBitsSent+7)>>3),
+            s->acknowlegementsSent,s->acknowlegementsPending,s->messagesOnResendQueue,
+            s->messageResends,(unsigned)((s->messagesTotalBitsResent+7)>>3),packetLoss,
+            s->messagesReceived+s->invalidMessagesReceived+s->duplicateMessagesReceived,
+            (unsigned)((s->bitsReceived+s->bitsWithBadCRCReceived+7)>>3),
+            s->acknowlegementsReceived,s->duplicateAcknowlegementsReceived);
+    }
+
 	else
 	{
 		RakNetTime time = RakNet::GetTime();

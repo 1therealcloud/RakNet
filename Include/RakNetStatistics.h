@@ -126,13 +126,14 @@ struct RAK_DLL_EXPORT RakNetStatisticsStruct
 };
 #pragma pack(pop)
 
-/// Verbosity level currently supports 0 (low), 1 (medium), 2 (high)
+/// Verbosity supports 0 (low), 1 (medium), 2 (high), 4 (SA-MP client detail)
 /// \param[in] s The Statistical information to format out
 /// \param[in] buffer The buffer containing a formated report
 /// \param[in] verbosityLevel 
 /// 0 low
 /// 1 medium 
 /// 2 high 
+/// 4 SA-MP client detail (0.3.DL-R1 native mode)
 void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityLevel );
 
 #endif
