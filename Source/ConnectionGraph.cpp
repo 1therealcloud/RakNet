@@ -22,6 +22,7 @@
 #include "GetTime.h"
 #include <string.h>
 #include "RakAssert.h"
+#include "SHA1.h"
 
 #ifdef _MSC_VER
 #pragma warning( push )

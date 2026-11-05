@@ -74,12 +74,9 @@ void RakClient::Disconnect( unsigned int blockDuration, unsigned char orderingCh
 	RakPeer::Disconnect( blockDuration, orderingChannel );
 }
 
-// User-requested compatibility stub, not the recovered native security path.
-// Original samp.dll RVA: 0x00033cc0. Keep the existing virtual slot and signature.
 void RakClient::InitializeSecurity( const char *privKeyP, const char *privKeyQ )
 {
-	(void)privKeyP;
-	(void)privKeyQ;
+	RakPeer::InitializeSecurity( privKeyP, privKeyQ, 0, 0 );
 }
 
 void RakClient::SetPassword( const char *_password )

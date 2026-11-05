@@ -27,6 +27,8 @@ class ConsoleServer;
 class ReplicaManager;
 class LogCommandParser;
 class PacketLogger;
+class RakNetCommandParser;
+class RakNetTransport;
 class TelnetTransport;
 class PacketConsoleLogger;
 class PacketFileLogger;
@@ -47,6 +49,8 @@ public:
 	static ReplicaManager* GetReplicaManager( void );
 	static LogCommandParser* GetLogCommandParser( void );
 	static PacketLogger* GetPacketLogger( void );
+	static RakNetCommandParser* GetRakNetCommandParser( void );
+	static RakNetTransport* GetRakNetTransport( void );
 	static TelnetTransport* GetTelnetTransport( void );
 	static PacketConsoleLogger* GetPacketConsoleLogger( void );
 	static PacketFileLogger* GetPacketFileLogger( void );
@@ -61,6 +65,8 @@ public:
 	static void DestroyReplicaManager( ReplicaManager* i);
 	static void DestroyLogCommandParser( LogCommandParser* i);
 	static void DestroyPacketLogger( PacketLogger* i);
+	static void DestroyRakNetCommandParser(  RakNetCommandParser* i );
+	static void DestroyRakNetTransport(  RakNetTransport* i );
 	static void DestroyTelnetTransport(  TelnetTransport* i );
 	static void DestroyPacketConsoleLogger(  PacketConsoleLogger* i );
 	static void DestroyPacketFileLogger(  PacketFileLogger* i );
