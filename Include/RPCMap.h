@@ -37,7 +37,9 @@ public:
 	void Clear(void);
     RPCNode *GetNodeFromIndex(RPCIndex index);
 	RPCNode *GetNodeFromFunctionName(int *uniqueIdentifier);
+	RPCIndex GetIndexFromFunctionName(unsigned char uniqueIdentifier);
 	RPCIndex GetIndexFromFunctionName(int *uniqueIdentifier);
+	void AddIdentifierWithFunction(unsigned char uniqueIdentifier, void *functionPointer, bool isPointerToMember);
 	void AddIdentifierWithFunction(int *uniqueIdentifier, void *functionPointer, bool isPointerToMember);
 	void AddIdentifierAtIndex(RPCIndex insertionIndex);
 	void RemoveNode(int *uniqueIdentifier);

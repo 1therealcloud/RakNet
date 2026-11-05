@@ -52,29 +52,35 @@ RPCNode *RPCMap::GetNodeFromFunctionName(int *uniqueIdentifier)
     return rpcSet[*((unsigned char*)uniqueIdentifier)];
 }
 
+RPCIndex RPCMap::GetIndexFromFunctionName(unsigned char uniqueIdentifier)
+{
+    return uniqueIdentifier;
+}
+
 RPCIndex RPCMap::GetIndexFromFunctionName(int *uniqueIdentifier)
 {
     if (uniqueIdentifier == 0)
         return (RPCIndex)UNDEFINED_RPC_INDEX;
 
     // for samp compatibility: return the low byte directly
-    return (RPCIndex)(*((unsigned char*)uniqueIdentifier));
+    return GetIndexFromFunctionName(*((unsigned char*)uniqueIdentifier));
 }
 
+void RPCMap::AddIdentifierWithFunction(unsigned char uniqueIdentifier, void *functionPointer, bool isPointerToMember)
+{
+    RPCNode *node = new RPCNode;
+    node->uniqueIdentifier = uniqueIdentifier;
+    node->functionPointer = functionPointer;
+    node->isPointerToMember = isPointerToMember;
+    rpcSet[uniqueIdentifier] = node;
+}
+
+// Adapter for callers using the fork's pointer-ID API.
 void RPCMap::AddIdentifierWithFunction(int *uniqueIdentifier, void *functionPointer, bool isPointerToMember)
 {
     if (uniqueIdentifier == 0 || functionPointer == 0)
         return;
-
-    const unsigned char identifier = *((unsigned char*)uniqueIdentifier);
-
-    RPCNode *node = new RPCNode;
-    node->uniqueIdentifier = identifier;
-    node->functionPointer = functionPointer;
-    node->isPointerToMember = isPointerToMember;
-
-    // for samp compatibility: overwrite without freeing the prior entry
-    rpcSet[identifier] = node;
+    AddIdentifierWithFunction(*((unsigned char*)uniqueIdentifier), functionPointer, isPointerToMember);
 }
 
 void RPCMap::AddIdentifierAtIndex(RPCIndex insertionIndex)

@@ -536,6 +536,7 @@ protected:
 	/// \param[in] playerId The sender of the packet 
 	/// \return true on success, false on a bad packet or an unregistered function
 	bool HandleRPCPacket( const char *data, int length, PlayerID playerId );
+	bool HandleAuthKeyPacket(const char *data, int length, PlayerID playerId);
 
 	///Handles an RPC reply packet.  This is data returned from an RPC call
 	/// \param[in] data A packet returned from Receive with the ID ID_RPC

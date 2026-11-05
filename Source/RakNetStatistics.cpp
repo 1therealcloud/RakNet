@@ -19,141 +19,110 @@
 #include "BitStream.h" // BITS_TO_BYTES
 #include "GetTime.h"
 
-// Verbosity supports 0 (low), 1 (medium), 2 (high), 4 (SA-MP client detail)
-// Buffer must be hold enough to hold the output string.  See the source to get an idea of how many bytes will be output
-void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityLevel )
-{
-	if ( s == 0 )
-	{
-		sprintf( buffer, "stats is a NULL pointer in statsToString\n" );
-		return ;
-	}
+static unsigned lastSampleTime;
+static unsigned __int64 lastSentBits;
+static unsigned __int64 lastReceivedBits;
 
-	if ( verbosityLevel == 0 )
-	{
-		// Verbosity level 0
-		sprintf( buffer,
-			"Total bytes sent: %u\n"
-			"Total bytes received: %u\n"
-			"Packetloss: %.1f%%\n",
-			BITS_TO_BYTES( s->totalBitsSent ),
-			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent );
-	}
-
-	else if ( verbosityLevel == 1 )
-	{
-		RakNetTime time = RakNet::GetTime();
-		double elapsedTime;
-		double bpsSent;
-		double bpsReceived;
-		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
-		bpsSent = (double) s->totalBitsSent / elapsedTime;
-		bpsReceived= (double) s->bitsReceived / elapsedTime;
-		// Verbosity level 1
-
-		sprintf( buffer,
-			"Messages in Send buffer: %u\n"
-			"Messages sent: %u\n"
-			"Bytes sent: %u\n"
-			"Acks sent: %u\n"
-			"Acks in send buffer: %u\n"
-			"Messages waiting for ack: %u\n"
-			"Messages resent: %u\n"
-			"Bytes resent: %u\n"
-			"Packetloss: %.1f%%\n"
-			"Messages received: %u\n"
-			"Bytes received: %u\n"
-			"Acks received: %u\n"
-			"Duplicate acks received: %u\n"
-			"Inst. KBits per second: %.1f\n"
-			"KBits per second sent:\t\t\t%.1f\n"
-			"KBits per second received:\t\t%.1f\n",
-			s->messageSendBuffer[ SYSTEM_PRIORITY ] + s->messageSendBuffer[ HIGH_PRIORITY ] + s->messageSendBuffer[ MEDIUM_PRIORITY ] + s->messageSendBuffer[ LOW_PRIORITY ],
+void StatisticsToString(RakNetStatisticsStruct* s,char* buffer,int verbosityLevel) {
+    if (!s) {
+        sprintf(buffer, "stats is a NULL pointer in statsToString\n");
+        return;
+    }
+    if (verbosityLevel==1) {
+        unsigned now=RakNet::GetTime();
+        if (!lastSampleTime) lastSampleTime=s->connectionStartTime;
+        int signedElapsed=(int)(now-lastSampleTime);
+        double inverseSeconds=1.0/((double)signedElapsed*0.001);
+        unsigned sentDelta=(unsigned)s->totalBitsSent-(unsigned)lastSentBits;
+        unsigned receivedDelta=(unsigned)s->bitsReceived-(unsigned)lastReceivedBits;
+        double bpsSent=(double)sentDelta*inverseSeconds;
+        double bpsReceived=(double)receivedDelta*inverseSeconds;
+        lastSentBits=s->totalBitsSent;
+        lastReceivedBits=s->bitsReceived;
+        lastSampleTime=RakNet::GetTime();
+        double packetLoss=(double)((long double)s->messagesTotalBitsResent*100.0L/(long double)s->totalBitsSent);
+        sprintf(buffer,
+            "Messages in Send buffer: %u\n"
+            "Messages sent: %u\n"
+            "Bytes sent: %u\n"
+            "Acks sent: %u\n"
+            "Acks in send buffer: %u\n"
+            "Messages waiting for ack: %u\n"
+            "Messages resent: %u\n"
+            "Bytes resent: %u\n"
+            "Packetloss: %.1f%%\n"
+            "Messages received: %u\n"
+            "Bytes received: %u\n"
+            "Acks received: %u\n"
+            "Duplicate acks received: %u\n"
+            "Inst. KBits per second: %.1f\n"
+            "KBits per second sent: %.1f\n"
+            "KBits per second received: %.1f\n",
+            s->messageSendBuffer[ SYSTEM_PRIORITY ] + s->messageSendBuffer[ HIGH_PRIORITY ] + s->messageSendBuffer[ MEDIUM_PRIORITY ] + s->messageSendBuffer[ LOW_PRIORITY ],
 			s->messagesSent[ SYSTEM_PRIORITY ] + s->messagesSent[ HIGH_PRIORITY ] + s->messagesSent[ MEDIUM_PRIORITY ] + s->messagesSent[ LOW_PRIORITY ],
-			BITS_TO_BYTES( s->totalBitsSent ),
+			(unsigned)(BITS_TO_BYTES( s->totalBitsSent )),
 			s->acknowlegementsSent,
 			s->acknowlegementsPending,
 			s->messagesOnResendQueue,
 			s->messageResends,
-			BITS_TO_BYTES( s->messagesTotalBitsResent ),
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent,
+			(unsigned)(BITS_TO_BYTES( s->messagesTotalBitsResent )),
+			packetLoss,
 			s->duplicateMessagesReceived + s->invalidMessagesReceived + s->messagesReceived,
-			BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived ),
+			(unsigned)(BITS_TO_BYTES( s->bitsReceived + s->bitsWithBadCRCReceived )),
 			s->acknowlegementsReceived,
 			s->duplicateAcknowlegementsReceived,
-			s->bitsPerSecond  / 1000.0,
-			bpsSent / 1000.0,
-			bpsReceived / 1000.0);
-	}
-
-    else if (verbosityLevel == 4)
-    {
-        // sa-mp StatisticsToString
-		// entry 0x100360D0
-        // mode4 branch 0x1003689D
-		// byte counters round up before truncation.
-        double packetLoss = (double)((long double)s->messagesTotalBitsResent * 100.0L / (long double)s->totalBitsSent);
-        sprintf(buffer, "Messages in Send buffer: %u\nMessages sent: %u\nBytes sent: %u\nAcks sent: %u\nAcks in send buffer: %u\nMessages waiting for ack: %u\nMessages resent: %u\nBytes resent: %u\nPacketloss: %.1f%%\nMessages received: %u\nBytes received: %u\nAcks received: %u\nDuplicate acks received: %u\n",
-            s->messageSendBuffer[0]+s->messageSendBuffer[1]+s->messageSendBuffer[2]+s->messageSendBuffer[3],
-            s->messagesSent[0]+s->messagesSent[1]+s->messagesSent[2]+s->messagesSent[3],
-            (unsigned)((s->totalBitsSent+7)>>3),
-            s->acknowlegementsSent,s->acknowlegementsPending,s->messagesOnResendQueue,
-            s->messageResends,(unsigned)((s->messagesTotalBitsResent+7)>>3),packetLoss,
-            s->messagesReceived+s->invalidMessagesReceived+s->duplicateMessagesReceived,
-            (unsigned)((s->bitsReceived+s->bitsWithBadCRCReceived+7)>>3),
-            s->acknowlegementsReceived,s->duplicateAcknowlegementsReceived);
+			s->bitsPerSecond * 0.001,
+			bpsSent * 0.001,
+			bpsReceived * 0.001);
+        return;
     }
-
-	else
-	{
-		RakNetTime time = RakNet::GetTime();
-		double elapsedTime;
-		double bpsSent;
-		double bpsReceived;
-		elapsedTime = (time-s->connectionStartTime) / 1000.0f;
-		bpsSent = (double) s->totalBitsSent / elapsedTime;
-		bpsReceived= (double) s->bitsReceived / elapsedTime;
-
-		// Verbosity level 2.
-		sprintf( buffer,
-			"Bytes sent:\t\t\t\t%u\n"
-			"Messages in send buffer:\t\tSP:%u HP:%u MP:%u LP:%u\n"
-			"Messages sent:\t\t\t\tSP:%u HP:%u MP:%u LP:%u\n"
-			"Message data bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
-			"Message header bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
-			"Message total bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
-			"Bytes received:\t\t\t\tTtl:%u Good:%u Bad:%u\n"
-			"Packets received:\t\t\tTtl:%u Good:%u Bad:%u\n"
-			"Acks received:\t\t\t\tTtl:%u Good:%u Dup:%u\n"
-			"Messages received:\t\t\tTotal:%u Valid:%u Invalid:%u Dup:%u\n"
-			"Packetloss:\t\t\t\t%.1f%%\n"
-			"Packets sent:\t\t\t\t%u\n"
-			"Acks sent:\t\t\t\t%u\n"
-			"Acks in send buffer:\t\t\t%u\n"
-			"Messages waiting for ack:\t\t%u\n"
-			"Ack bytes sent:\t\t\t\t%u\n"
-			"Sent packets containing only acks:\t%u\n"
-			"Sent packets w/only acks and resends:\t%u\n"
-			"Reliable messages resent:\t\t%u\n"
-			"Reliable message data bytes resent:\t%u\n"
-			"Reliable message header bytes resent:\t%u\n"
-			"Reliable message total bytes resent:\t%u\n"
-			"Number of messages split:\t\t%u\n"
-			"Number of messages unsplit:\t\t%u\n"
-			"Message splits performed:\t\t%u\n"
-			"Additional encryption bytes:\t\t%u\n"
-			"Sequenced messages out of order:\t%u\n"
-			"Sequenced messages in order:\t\t%u\n"
-			"Ordered messages out of order:\t\t%u\n"
-			"Ordered messages in of order:\t\t%u\n"
-			"Split messages waiting for reassembly:\t%u\n"
-			"Messages in internal output queue:\t%u\n"
-			"Inst KBits per second:\t\t\t%.1f\n"
-			"Elapsed time (sec):\t\t\t%.1f\n"
-			"KBits per second sent:\t\t\t%.1f\n"
-			"KBits per second received:\t\t%.1f\n",
-			BITS_TO_BYTES( s->totalBitsSent ),
+    if (verbosityLevel==2) {
+        unsigned elapsedMs=RakNet::GetTime()-s->connectionStartTime;
+        double elapsedTime=(double)elapsedMs*(double)0.001f;
+        double inverseSeconds=1.0/elapsedTime;
+        double bpsSent=(double)s->totalBitsSent*inverseSeconds;
+        double bpsReceived=(double)s->bitsReceived*inverseSeconds;
+        double packetLoss=(double)((long double)s->messagesTotalBitsResent*100.0L/(long double)s->totalBitsSent);
+        // Native x86 call passes 64-bit BITS_TO_BYTES values to legacy %u fields.
+        // Do not add narrowing casts here: that changes actual vararg layout.
+        sprintf(buffer,
+            "Bytes sent:\t\t\t\t%u\n"
+            "Messages in send buffer:\t\tSP:%u HP:%u MP:%u LP:%u\n"
+            "Messages sent:\t\t\t\tSP:%u HP:%u MP:%u LP:%u\n"
+            "Message data bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
+            "Message header bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
+            "Message total bytes sent:\t\tSP:%u HP:%u MP:%u LP:%u\n"
+            "Bytes received:\t\t\t\tTtl:%u Good:%u Bad:%u\n"
+            "Packets received:\t\t\tTtl:%u Good:%u Bad:%u\n"
+            "Acks received:\t\t\t\tTtl:%u Good:%u Dup:%u\n"
+            "Messages received:\t\t\tTotal:%u Valid:%u Invalid:%u Dup:%u\n"
+            "Packetloss:\t\t\t\t%.1f%%\n"
+            "Packets sent:\t\t\t\t%u\n"
+            "Acks sent:\t\t\t\t%u\n"
+            "Acks in send buffer:\t\t\t%u\n"
+            "Messages waiting for ack:\t\t%u\n"
+            "Ack bytes sent:\t\t\t\t%u\n"
+            "Sent packets containing only acks:\t%u\n"
+            "Sent packets w/only acks and resends:\t%u\n"
+            "Reliable messages resent:\t\t%u\n"
+            "Reliable message data bytes resent:\t%u\n"
+            "Reliable message header bytes resent:\t%u\n"
+            "Reliable message total bytes resent:\t%u\n"
+            "Number of messages split:\t\t%u\n"
+            "Number of messages unsplit:\t\t%u\n"
+            "Message splits performed:\t\t%u\n"
+            "Additional encryption bytes:\t\t%u\n"
+            "Sequenced messages out of order:\t%u\n"
+            "Sequenced messages in order:\t\t%u\n"
+            "Ordered messages out of order:\t\t%u\n"
+            "Ordered messages in of order:\t\t%u\n"
+            "Split messages waiting for reassembly:\t%u\n"
+            "Messages in internal output queue:\t%u\n"
+            "Inst KBits per second:\t\t\t%.1f\n"
+            "Elapsed time (sec):\t\t\t%.1f\n"
+            "KBits per second sent:\t\t\t%.1f\n"
+            "KBits per second received:\t\t%.1f\n",
+            BITS_TO_BYTES( s->totalBitsSent ),
 			s->messageSendBuffer[ SYSTEM_PRIORITY ], s->messageSendBuffer[ HIGH_PRIORITY ], s->messageSendBuffer[ MEDIUM_PRIORITY ], s->messageSendBuffer[ LOW_PRIORITY ],
 			s->messagesSent[ SYSTEM_PRIORITY ], s->messagesSent[ HIGH_PRIORITY ], s->messagesSent[ MEDIUM_PRIORITY ], s->messagesSent[ LOW_PRIORITY ],
 			BITS_TO_BYTES( s->messageDataBitsSent[ SYSTEM_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ HIGH_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ MEDIUM_PRIORITY ] ), BITS_TO_BYTES( s->messageDataBitsSent[ LOW_PRIORITY ] ),
@@ -163,7 +132,7 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			s->packetsReceived + s->packetsWithBadCRCReceived, s->packetsReceived, s->packetsWithBadCRCReceived,
 			s->acknowlegementsReceived + s->duplicateAcknowlegementsReceived, s->acknowlegementsReceived, s->duplicateAcknowlegementsReceived,
 			s->messagesReceived + s->invalidMessagesReceived + s->duplicateMessagesReceived, s->messagesReceived, s->invalidMessagesReceived, s->duplicateMessagesReceived,
-			100.0f * ( float ) s->messagesTotalBitsResent / ( float ) s->totalBitsSent,
+			packetLoss,
 			s->packetsSent,
 			s->acknowlegementsSent,
 			s->acknowlegementsPending,
@@ -185,10 +154,36 @@ void StatisticsToString( RakNetStatisticsStruct *s, char *buffer, int verbosityL
 			s->orderedMessagesInOrder,
 			s->messagesWaitingForReassembly,
 			s->internalOutputQueueSize,
-			s->bitsPerSecond/1000.0,
+			s->bitsPerSecond * 0.001,
 			elapsedTime,
-			bpsSent / 1000.0,
-			bpsReceived / 1000.0
-			);
-	}
+			bpsSent * 0.001,
+			bpsReceived * 0.001);
+        return;
+    }
+    if (verbosityLevel==4) {
+        double packetLoss=(double)((long double)s->messagesTotalBitsResent*100.0L/(long double)s->totalBitsSent);
+        sprintf(buffer,
+            "Messages in Send buffer: %u\n"
+            "Messages sent: %u\n"
+            "Bytes sent: %u\n"
+            "Acks sent: %u\n"
+            "Acks in send buffer: %u\n"
+            "Messages waiting for ack: %u\n"
+            "Messages resent: %u\n"
+            "Bytes resent: %u\n"
+            "Packetloss: %.1f%%\n"
+            "Messages received: %u\n"
+            "Bytes received: %u\n"
+            "Acks received: %u\n"
+            "Duplicate acks received: %u\n",
+            s->messageSendBuffer[0]+s->messageSendBuffer[1]+s->messageSendBuffer[2]+s->messageSendBuffer[3],
+            s->messagesSent[0]+s->messagesSent[1]+s->messagesSent[2]+s->messagesSent[3],
+            (unsigned)((s->totalBitsSent+7)>>3),
+            s->acknowlegementsSent,s->acknowlegementsPending,s->messagesOnResendQueue,
+            s->messageResends,(unsigned)((s->messagesTotalBitsResent+7)>>3),packetLoss,
+            s->messagesReceived+s->invalidMessagesReceived+s->duplicateMessagesReceived,
+            (unsigned)((s->bitsReceived+s->bitsWithBadCRCReceived+7)>>3),
+            s->acknowlegementsReceived,s->duplicateAcknowlegementsReceived);
+    }
+    // Other modes, including zero, leave the buffer untouched.
 }

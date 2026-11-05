@@ -975,7 +975,7 @@ void RakPeer::RegisterAsRemoteProcedureCall( int* uniqueID, void ( *functionPoin
 	if ( uniqueID == 0 || *((unsigned char*)uniqueID) == 0 || functionPointer == 0 )
 		return;
 
-	rpcMap.AddIdentifierWithFunction( uniqueID, (void*)functionPointer, false );
+	rpcMap.AddIdentifierWithFunction( *((unsigned char*)uniqueID), (void*)functionPointer, false );
 }
 
 // for samp compatibility
@@ -984,7 +984,7 @@ void RakPeer::RegisterClassMemberRPC( int* uniqueID, void *functionPointer )
 	if ( uniqueID == 0 || *((unsigned char*)uniqueID) == 0 || functionPointer == 0 )
 		return;
 
-	rpcMap.AddIdentifierWithFunction( uniqueID, functionPointer, true );
+	rpcMap.AddIdentifierWithFunction( *((unsigned char*)uniqueID), functionPointer, true );
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1210,13 +1210,9 @@ int RakPeer::GetIndexFromPlayerID( const PlayerID playerId )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 PlayerID RakPeer::GetPlayerIDFromIndex( int index )
 {
-	// remoteSystemList in user thread
-	//if ( index >= 0 && index < remoteSystemListSize )
-	if ( index >= 0 && index < maximumNumberOfPeers )
-		if (remoteSystemList[ index ].connectMode==RakPeer::RemoteSystemStruct::CONNECTED) // Don't give the user players that aren't fully connected, since sends will fail
-			return remoteSystemList[ index ].playerId;
-
-	return UNASSIGNED_PLAYER_ID;
+    if ( index >= 0 && index < maximumNumberOfPeers )
+        return remoteSystemList[index].playerId;
+    return UNASSIGNED_PLAYER_ID;
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2636,82 +2632,60 @@ RakNetTime RakPeer::GetBestClockDifferential( const PlayerID playerId ) const
 // for samp compatibility
 bool RakPeer::HandleRPCPacket( const char *data, int length, PlayerID playerId )
 {
-	if ( data == 0 || length <= 0 )
-		return false;
+    RakNet::BitStream incomingBitStream( (unsigned char *)data, length, false );
+    RPCParameters rpcParms;
+    rpcParms.recipient = this;
+    rpcParms.sender = playerId;
 
-	RakNet::BitStream incomingBitStream( (unsigned char *)data, length, false );
-	unsigned char rpcIdentifier;
-	unsigned char *userData;
-	RPCParameters rpcParms;
-	RakNet::BitStream replyToSender;
+    incomingBitStream.IgnoreBits( 8 );
+    if ( (unsigned char)data[0] == ID_TIMESTAMP )
+        incomingBitStream.IgnoreBits( 8 * (sizeof(RakNetTime) + sizeof(unsigned char)) );
 
-	rpcParms.replyToSender = &replyToSender;
-	rpcParms.recipient = this;
-	rpcParms.sender = playerId;
-	rpcParms.input = 0;
-	rpcParms.numberOfBitsOfData = 0;
+    // The native read overwrites only the low byte of the length argument.
+    // Its result is not checked before looking up the numeric RPC identifier.
+    incomingBitStream.ReadBits( (unsigned char *)&length, 8, true );
+    RPCIndex rpcIndex = rpcMap.GetIndexFromFunctionName( (unsigned char)length );
+    if ( incomingBitStream.ReadCompressed( rpcParms.numberOfBitsOfData ) == false )
+        return false;
+    if ( rpcIndex == (RPCIndex)UNDEFINED_RPC_INDEX )
+        return false;
 
-	incomingBitStream.IgnoreBits( 8 );
+    RPCNode *node = rpcMap.GetNodeFromIndex( rpcIndex );
+    if ( node == 0 )
+        return false;
 
-	if ( (unsigned char)data[0] == ID_TIMESTAMP )
-		incomingBitStream.IgnoreBits( 8 * (sizeof(RakNetTime) + sizeof(unsigned char)) );
+    if ( rpcParms.numberOfBitsOfData == 0 )
+    {
+        rpcParms.input = 0;
+        node->staticFunctionPointer( &rpcParms );
+        return true;
+    }
 
-	if ( incomingBitStream.Read( rpcIdentifier ) == false )
-		return false;
+    int unreadBits = incomingBitStream.GetNumberOfUnreadBits();
+    if ( unreadBits == 0 )
+        return false;
 
-	int numericIdentifier = rpcIdentifier;
-	RPCIndex rpcIndex = rpcMap.GetIndexFromFunctionName( &numericIdentifier );
-
-	// for samp compatibility: reserve RPC index 0xFF
-	if ( rpcIndex == (RPCIndex)UNDEFINED_RPC_INDEX )
-		return false;
-
-	RPCNode *node = rpcMap.GetNodeFromIndex( rpcIndex );
-	if ( node == 0 )
-		return false;
-
-	if ( incomingBitStream.ReadCompressed( rpcParms.numberOfBitsOfData ) == false )
-		return false;
-
-	if ( rpcParms.numberOfBitsOfData == 0 )
-	{
-		// for samp compatibility: dispatch the stored function directly
-		node->staticFunctionPointer( &rpcParms );
-		return true;
-	}
-
-	if ( incomingBitStream.GetNumberOfUnreadBits() < (int)rpcParms.numberOfBitsOfData )
-		return false;
-
-	bool usedAlloca = false;
-
+    unsigned char *userData;
+    bool usedAlloca = false;
 #if !defined(_COMPATIBILITY_1)
-	if ( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) < MAX_ALLOCA_STACK_ALLOCATION )
-	{
-		userData = (unsigned char*)alloca( BITS_TO_BYTES( rpcParms.numberOfBitsOfData ) );
-		usedAlloca = true;
-	}
-	else
+    if ( BITS_TO_BYTES( unreadBits ) < MAX_ALLOCA_STACK_ALLOCATION )
+    {
+        userData = (unsigned char *)alloca( BITS_TO_BYTES( unreadBits ) );
+        usedAlloca = true;
+    }
+    else
 #endif
-		userData = new unsigned char[BITS_TO_BYTES( rpcParms.numberOfBitsOfData )];
+        userData = new unsigned char[BITS_TO_BYTES( unreadBits )];
 
-	if ( incomingBitStream.ReadBits( userData, rpcParms.numberOfBitsOfData, false ) == false )
-	{
-		if ( usedAlloca == false )
-			delete [] userData;
+    // Native failure returns without releasing a heap allocation here.
+    if ( incomingBitStream.ReadBits( userData, rpcParms.numberOfBitsOfData, false ) == false )
+        return false;
 
-		return false;
-	}
-
-	rpcParms.input = userData;
-
-	// for samp compatibility: direct RPC dispatch
-	node->staticFunctionPointer( &rpcParms );
-
-	if ( usedAlloca == false )
-		delete [] userData;
-
-	return true;
+    rpcParms.input = userData;
+    node->staticFunctionPointer( &rpcParms );
+    if ( usedAlloca == false )
+        delete [] userData;
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -3077,7 +3051,7 @@ bool RakPeer::HandleBufferedRPC(BufferedCommandStruct *bcs, RakNetTime time)
 		outgoingBitStream.ResetWritePointer(); // Let us write at the start of the data block, rather than at the end
 
 		outgoingBitStream.Write( (unsigned char) ID_RPC );
-		rpcIndex=remoteSystemList[sendList[sendListIndex]].rpcMap.GetIndexFromFunctionName(uniqueID); // Lots of trouble but we can only use remoteSystem->[whatever] in this thread so that is why this command was buffered
+		rpcIndex=remoteSystemList[sendList[sendListIndex]].rpcMap.GetIndexFromFunctionName(*((unsigned char*)uniqueID)); // Lots of trouble but we can only use remoteSystem->[whatever] in this thread so that is why this command was buffered
 		if (rpcIndex!=UNDEFINED_RPC_INDEX)
 		{
 			// We have an RPC name to an index mapping, so write the index
@@ -3561,7 +3535,7 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
         bool protocolViolation = false;
         const bool received = remoteSystem->reliabilityLayer.HandleSocketReceiveFromConnectedPlayer(
             data, length, playerId, rakPeer->messageHandlerList, rakPeer->MTUSize,
-            SocketLayer::Instance()->IsServerDatagramMode() ? &protocolViolation : 0);
+            &protocolViolation);
         if (protocolViolation)
         {
             // for samp compatibility: block the IP for 60000 ms
@@ -3660,6 +3634,11 @@ void ProcessNetworkPacket( const unsigned int binaryAddress, const unsigned shor
 }
 
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+bool RakPeer::HandleAuthKeyPacket(const char *data, int length, PlayerID playerId)
+{
+    return data != 0 && length != 0 && playerId != UNASSIGNED_PLAYER_ID;
+}
+
 bool RakPeer::RunUpdateCycle( void )
 {
 	RakPeer::RemoteSystemStruct * remoteSystem;
@@ -3829,9 +3808,6 @@ bool RakPeer::RunUpdateCycle( void )
 			c[0] = ID_OPEN_CONNECTION_REQUEST;
 			memcpy( c + 1, &cookie, sizeof(cookie) );
 
-			unsigned i;
-			for (i=0; i < messageHandlerList.Size(); i++)
-				messageHandlerList[i]->OnDirectSocketSend((char*)c, sizeof(c) * 8, rcs->playerId);
 			SocketLayer::Instance()->SendTo( connectionSocket, (char*)c, sizeof(c), rcs->playerId.binaryAddress, rcs->playerId.port );
 		}
 
@@ -3943,15 +3919,6 @@ bool RakPeer::RunUpdateCycle( void )
 				continue;
 			}
 
-			// for samp compatibility: finish shutdown after 20 seconds
-			if ((remoteSystem->connectMode==RemoteSystemStruct::DISCONNECT_ASAP ||
-				 remoteSystem->connectMode==RemoteSystemStruct::DISCONNECT_ASAP_SILENTLY) &&
-				(RakNetTime)(timeMS - remoteSystem->lastReliableSend) > 20000)
-			{
-				CloseConnectionInternal(playerId, false, true, 0);
-				continue;
-			}
-
 			// Ping this guy if it is time to do so
 			if ( remoteSystem->connectMode==RemoteSystemStruct::CONNECTED && timeMS > remoteSystem->nextPingTime && ( occasionalPing || remoteSystem->lowestPing == (unsigned short)-1 ) )
 			{
@@ -4022,6 +3989,10 @@ bool RakPeer::RunUpdateCycle( void )
 					if ( (unsigned char)(data)[0] == ID_CONNECTION_REQUEST )
 					{
 						ParseConnectionRequestPacket(remoteSystem, playerId, (const char*)data, byteSize);
+						delete [] data;
+					}
+					else if ( (unsigned char)data[0] == ID_AUTH_KEY && HandleAuthKeyPacket((const char *)data, byteSize, playerId) )
+					{
 						delete [] data;
 					}
 					else

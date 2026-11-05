@@ -89,7 +89,7 @@ public:
 	/// \param[in] MTUSize maximum datagram size
 	/// \retval true Success
 	/// \retval false Modified packet
-	bool HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize, bool *protocolViolation = 0 );
+	bool HandleSocketReceiveFromConnectedPlayer( const char *buffer, int length, PlayerID playerId, DataStructures::List<PluginInterface*> &messageHandlerList, int MTUSize, bool *protocolViolation );
 
 	/// This allocates bytes and writes a user-level message to those bytes.
 	/// \param[out] data The message

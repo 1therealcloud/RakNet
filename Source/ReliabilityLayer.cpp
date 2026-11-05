@@ -314,8 +314,7 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 	assert( !( length <= 0 || buffer == 0 ) );
 #endif
 
-	if (protocolViolation)
-		*protocolViolation = false;
+	*protocolViolation = false;
 
 	if ( length <= 1 || buffer == 0 )   // Length of 1 is a connection request resend that we just ignore
 		return true;
@@ -333,6 +332,7 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 
 	// bytesReceived+=length + UDP_HEADER_SIZE;
 
+    const RakNetTime receiveTime = RakNet::GetTime();
 	UpdateThreadedMemory();
 
 	// decode this whole chunk if the decoder is defined.
@@ -351,8 +351,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 
 	RakNet::BitStream socketData( (unsigned char*) buffer, length, false ); // Convert the incoming data to a bitstream for easy parsing
 	time = RakNet::GetTimeNS();
-    // share one receive timestamp for this datagram.
-    const RakNetTime receiveTime = protocolViolation ? RakNet::GetTime() : 0;
 
 	DataStructures::RangeList<MessageNumberType> incomingAcks;
 	socketData.Read(hasAcks);
@@ -373,13 +371,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
             statistics.acknowlegementsReceived +=
                 (unsigned)(incomingAcks.ranges[i].maxIndex - incomingAcks.ranges[i].minIndex);
 
-            // for samp compatibility: enforce the ACK limit
-            if (protocolViolation &&
-                (int)(incomingAcks.ranges[i].maxIndex - incomingAcks.ranges[i].minIndex) > 3000)
-            {
-                *protocolViolation = true;
-                return true;
-            }
 
 			for (messageNumber=incomingAcks.ranges[i].minIndex; messageNumber >= incomingAcks.ranges[i].minIndex && messageNumber <= incomingAcks.ranges[i].maxIndex; messageNumber++)
 			{
@@ -389,8 +380,7 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				//printf("Got Ack for %i. resendList.Size()=%i sendQueue[0].Size() = %i\n",internalPacket->messageNumber, resendList.Size(), sendQueue[0].Size());
 				ackedHistogramCounter=RemovePacketFromResendListAndDeleteOlderReliableSequenced( messageNumber, time );
 
-                if (protocolViolation)
-                    ++ackWindowCount;
+                ++statistics.field_120;
 
 #ifdef _DEBUG_LOGGER
 				{
@@ -416,21 +406,7 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				}
 			}
 
-            // check the previous ack window, not the current burst.
-            if (protocolViolation)
-            {
-                if ((RakNetTime)(receiveTime - ackWindowStart) > 1000)
-                {
-                    ackWindowStart = receiveTime;
-                    ackPreviousCount = ackWindowCount;
-                    ackWindowCount = 0;
-                }
-                if (ackPreviousCount > 3000)
-                {
-                    *protocolViolation = true;
-                    return true;
-                }
-            }
+
 		}
 	}
 
@@ -470,18 +446,6 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 				resetReceivedPackets=false;
 			}
 
-            // for samp compatibility: use a signed 16-bit sequence gap
-            if (protocolViolation)
-            {
-                const short gap = (short)(internalPacket->messageNumber - receivedPacketsBaseIndex);
-                if (gap > 3000 || gap < -3000)
-                {
-                    delete [] internalPacket->data;
-                    internalPacketPool.ReleasePointer(internalPacket);
-                    *protocolViolation = true;
-                    return true;
-                }
-            }
 
 			// If the following conditional is true then this either a duplicate packet
 			// or an older out of order packet
@@ -548,21 +512,12 @@ bool ReliabilityLayer::HandleSocketReceiveFromConnectedPlayer( const char *buffe
 
 			statistics.messagesReceived++;
 
-            // check the previous one-second message window.
-            if (protocolViolation)
+            ++statistics.field_114;
+            if ((RakNetTime)(receiveTime - statistics.field_110) > 1000)
             {
-                ++messageWindowCount;
-                if ((RakNetTime)(receiveTime - messageWindowStart) > 1000)
-                {
-                    messageWindowStart = receiveTime;
-                    messagePreviousCount = messageWindowCount;
-                    messageWindowCount = 0;
-                }
-                if (messagePreviousCount > 500)
-                {
-                    *protocolViolation = true;
-                    return true;
-                }
+                statistics.field_110 = receiveTime;
+                statistics.field_118 = statistics.field_114;
+                statistics.field_114 = 0;
             }
 
 			// If the allocated buffer is > DEFAULT_HAS_RECEIVED_PACKET_QUEUE_SIZE and it is 3x greater than the number of elements actually being used
@@ -1230,7 +1185,7 @@ void ReliabilityLayer::SendBitStream( SOCKET s, PlayerID playerId, RakNet::BitSt
 		const int encryptedLength = (length + 2 + 7) & ~7;
 		bitStream->AddBitsAndReallocate((encryptedLength - length) * 8);
 		encryptor.Encrypt( ( unsigned char* ) bitStream->GetData(), length, ( unsigned char* ) bitStream->GetData(), &length );
-		statistics.encryptionBitsSent = ( length - oldLength ) * 8;
+		statistics.encryptionBitsSent += ( length - oldLength ) * 8;
 
 		assert( length == encryptedLength && ( length % 8 ) == 0 );
 	}
@@ -2244,10 +2199,14 @@ InternalPacket * ReliabilityLayer::BuildPacketFromSplitPacketList( SplitPacketId
 		// Reconstruct
 		internalPacket = CreateInternalPacketCopy( splitPacketChannelList[i]->splitPacketList[0], 0, 0, time );
 		internalPacket->dataBitLength=0;
+        unsigned allocationLength = 0;
 		for (j=0; j < splitPacketChannelList[i]->splitPacketList.Size(); j++)
+        {
 			internalPacket->dataBitLength+=splitPacketChannelList[i]->splitPacketList[j]->dataBitLength;
+            allocationLength += BITS_TO_BYTES(splitPacketChannelList[i]->splitPacketList[j]->dataBitLength);
+        }
 
-		internalPacket->data = new unsigned char[ BITS_TO_BYTES( internalPacket->dataBitLength ) ];
+		internalPacket->data = new unsigned char[allocationLength];
 
 		byteProgress=0;
 		for (j=0; j < splitPacketChannelList[i]->splitPacketList.Size(); j++)
