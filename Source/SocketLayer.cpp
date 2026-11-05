@@ -539,8 +539,7 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
 		if (serverDatagramMode)
 		{
 			// for samp compatibility: handle queries before decoding
-			if (len >= 11 && data[0] == 'S' && data[1] == 'A' &&
-			    data[2] == 'M' && data[3] == 'P')
+			if (len >= 11 && data[0] == 'S' && data[1] == 'A' && data[2] == 'M' && data[3] == 'P')
             {
                 if (queryHandler)
                     queryHandler(s, data, len, sa);
@@ -548,11 +547,9 @@ int SocketLayer::RecvFrom( const SOCKET s, RakPeer *rakPeer, int *errorCode )
             }
 
 			unsigned char decoded[MAXIMUM_MTU_SIZE];
-			const int decodedLength = DecodeDatagram(data, len,
-			    static_cast<unsigned char>(datagramPortKey), decoded);
+			const int decodedLength = DecodeDatagram(data, len, static_cast<unsigned char>(datagramPortKey), decoded);
 			if (decodedLength > 0)
-				ProcessNetworkPacket(sa.sin_addr.s_addr, portnum,
-				    reinterpret_cast<const char*>(decoded), decodedLength, rakPeer);
+				ProcessNetworkPacket(sa.sin_addr.s_addr, portnum, reinterpret_cast<const char*>(decoded), decodedLength, rakPeer);
 		}
 		else
 			ProcessNetworkPacket(sa.sin_addr.s_addr, portnum, data, len, rakPeer);
