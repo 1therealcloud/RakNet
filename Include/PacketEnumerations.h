@@ -18,6 +18,18 @@
 #ifndef __PACKET_ENUMERATIONS_H
 #define __PACKET_ENUMERATIONS_H 
 
+/// You should not edit the file PacketEnumerations.h as it is a part of RakNet static library
+/// To define your own message id, define an enum following the code example that follows. 
+///
+/// \code
+/// enum {
+///   ID_MYPROJECT_MSG_1 = ID_USER_PACKET_ENUM
+///   ID_MYPROJECT_MSG_2, 
+///    ... 
+/// };
+/// \endcode 
+///
+/// \note All these enumerations should be casted to (unsigned char) before writing them to RakNet::BitStream
 enum
 {
 	//
