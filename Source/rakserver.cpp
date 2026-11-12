@@ -509,8 +509,8 @@ RakNetStatisticsStruct * const RakServer::GetStatistics( const PlayerID playerId
 
 RakNetTime RakServer::AdjustTimestamp( const PlayerID playerId, RakNetTime timestamp )
 {
-	// 0x45A7B0 -> 0x455E90.
-	return timestamp - RakPeer::GetBestClockDifferential(playerId);
+	// The native client-DLL wrapper calls the peer adjustment entry directly.
+	return RakPeer::AdjustTimestamp(playerId, timestamp);
 }
 
 void RakServer::ApplyNetworkSimulator( double maxSendBPS, unsigned short minExtraPing, unsigned short extraPingVariance)

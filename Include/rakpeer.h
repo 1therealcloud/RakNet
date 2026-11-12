@@ -471,6 +471,9 @@ public:
 	RakNetStatisticsStruct * const GetStatistics( const PlayerID playerId );
 
 	// --------------------------------------------------------------------------------------------EVERYTHING AFTER THIS COMMENT IS FOR INTERNAL USE ONLY--------------------------------------------------------------------------------------------
+	// Descriptive recovery name for the native clock-differential subtraction slot.
+	RakNetTime AdjustTimestamp( const PlayerID playerId, RakNetTime timestamp );
+
 	/// \internal
 	RPCMap *GetRPCMap( const PlayerID playerId);
 

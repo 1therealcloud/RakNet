@@ -464,6 +464,9 @@ public:
 	virtual RakNetStatisticsStruct * const GetStatistics( const PlayerID playerId )=0;
 
 	// --------------------------------------------------------------------------------------------EVERYTHING AFTER THIS COMMENT IS FOR INTERNAL USE ONLY--------------------------------------------------------------------------------------------
+	// Descriptive recovery name; the native interface has this slot before GetRPCMap.
+	virtual RakNetTime AdjustTimestamp( const PlayerID playerId, RakNetTime timestamp )=0;
+
 	/// \internal
 	virtual RPCMap *GetRPCMap( const PlayerID playerId)=0;
 

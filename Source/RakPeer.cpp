@@ -2343,6 +2343,12 @@ bool RakPeer::IsNetworkSimulatorActive( void )
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // For internal use
 // --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Descriptive recovery name; original lexical name is unproved.
+RakNetTime RakPeer::AdjustTimestamp( const PlayerID playerId, RakNetTime timestamp )
+{
+	return timestamp - GetBestClockDifferential( playerId );
+}
+
 RPCMap* RakPeer::GetRPCMap( const PlayerID playerId)
 {
     if (playerId==UNASSIGNED_PLAYER_ID)
