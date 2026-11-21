@@ -229,11 +229,12 @@ void BitStream::Write( BitStream *bitStream, int numberOfBits )
 
 	while (numberOfBits-->0)
 	{
+		const int sourceOffset = bitStream->readOffset++;
 		numberOfBitsMod8 = numberOfBitsUsed & 7;
 		if ( numberOfBitsMod8 == 0 )
 		{
 			// New byte
-			if (bitStream->data[ bitStream->readOffset >> 3 ] & ( 0x80 >> ( bitStream->readOffset++ % 8 ) ) )
+			if (bitStream->data[sourceOffset >> 3] & (0x80 >> (sourceOffset & 7)) )
 			{
 				// Write 1
 				data[ numberOfBitsUsed >> 3 ] = 0x80;
@@ -247,7 +248,7 @@ void BitStream::Write( BitStream *bitStream, int numberOfBits )
 		else
 		{
 			// Existing byte
-			if (bitStream->data[ bitStream->readOffset >> 3 ] & ( 0x80 >> ( bitStream->readOffset++ % 8 ) ) )
+			if (bitStream->data[sourceOffset >> 3] & (0x80 >> (sourceOffset & 7)) )
 				data[ numberOfBitsUsed >> 3 ] |= 0x80 >> ( numberOfBitsMod8 ); // Set the bit to 1
 			// else 0, do nothing
 		}
@@ -326,7 +327,8 @@ bool BitStream::ReadBit( void )
 {
 	if (GetNumberOfUnreadBits() == 0)
 		return false;
-	return ( bool ) ( data[ readOffset >> 3 ] & ( 0x80 >> ( readOffset++ & 7 ) ) );
+	const int offset = readOffset++;
+	return (data[offset >> 3] & (0x80 >> (offset & 7))) != 0;
 }
 
 // Align the bitstream to the byte boundary and then write the specified number of bits.

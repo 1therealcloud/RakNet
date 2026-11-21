@@ -3,8 +3,6 @@
 #ifndef _COMPATIBILITY_2
 	#if defined(_WIN32) || defined(__CYGWIN__)
 	#include <io.h>
-	#elif !defined ( __APPLE__ ) && !defined ( __APPLE_CC__ )
-	#include <sys/io.h>
 	#endif
 #endif
 #include <stdio.h>

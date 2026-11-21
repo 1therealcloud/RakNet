@@ -76,7 +76,15 @@
 // the cat namespace
 
 #if !defined(HOST_ENDIAN_IS_BIG) && !defined(HOST_ENDIAN_IS_LITTLE)
-#if defined(__sparc) || defined(__sparc__) || defined(__powerpc__) || \
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+# define HOST_ENDIAN_IS_BIG
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+# define HOST_ENDIAN_IS_LITTLE
+#elif defined(_WIN32) || defined(__ARMEL__) || defined(__AARCH64EL__)
+# define HOST_ENDIAN_IS_LITTLE
+#elif defined(__ARMEB__) || defined(__AARCH64EB__)
+# define HOST_ENDIAN_IS_BIG
+#elif defined(__sparc) || defined(__sparc__) || defined(__powerpc__) || \
 	defined(__ppc__) || defined(__hppa) || defined(_MIPSEB) || defined(_POWER) || \
 	defined(_M_PPC) || defined(_M_MPPC) || defined(_M_MRX000) || \
 	defined(__POWERPC) || defined(m68k) || defined(powerpc) || \
@@ -106,37 +114,12 @@
 
 namespace cat
 {
-
-	//// endian-ness (ignoring NUXI) ////
-	// Prevent an error message with gcc which define preprocessor symbol
-	// LITTLE_ENDIAN or BIG_ENDIAN (endian.h)
-	// dalfy
 #if !defined(BIG_ENDIAN) && !defined(LITTLE_ENDIAN)
-#if defined(__sparc) || defined(__sparc__) || defined(__powerpc__) || \
-	defined(__ppc__) || defined(__hppa) || defined(_MIPSEB) || defined(_POWER) || \
-	defined(_M_PPC) || defined(_M_MPPC) || defined(_M_MRX000) || \
-	defined(__POWERPC) || defined(m68k) || defined(powerpc) || \
-	defined(sel) || defined(pyr) || defined(mc68000) || defined(is68k) || \
-	defined(tahoe) || defined(ibm032) || defined(ibm370) || defined(MIPSEB) || \
-	defined(__convex__) || defined(DGUX) || defined(hppa) || defined(apollo) || \
-	defined(_CRAY) || defined(__hp9000) || defined(__hp9000s300) || defined(_AIX) || \
-	defined(__AIX) || defined(__pyr__) || defined(hp9000s700) || defined(_IBMR2)
-
-# define BIG_ENDIAN
-
-#elif defined(__i386__) || defined(i386) || defined(intel) || defined(_M_IX86) || \
-	defined(__amd64) || defined(__amd64__)	|| \
-	defined(__alpha__) || defined(__alpha) || defined(__ia64) || defined(__ia64__) || \
-	defined(_M_ALPHA) || defined(ns32000) || defined(__ns32000__) || defined(sequent) || \
-	defined(MIPSEL) || defined(_MIPSEL) || defined(sun386) || defined(__sun386__)
-
-# define LITTLE_ENDIAN
-
-#else
-
-# error "I can't tell what endian-ness to use for your architecture."
-
-#endif
+# if defined(HOST_ENDIAN_IS_BIG)
+#  define BIG_ENDIAN
+# else
+#  define LITTLE_ENDIAN
+# endif
 #endif
 
 #ifndef FALSE
@@ -313,8 +296,10 @@ namespace cat
 	typedef signed __int64 s64;
 # endif
 
-# define ASSEMBLY_INTEL_SYNTAX
-# define ASSEMBLY_BLOCK __asm
+# if defined(_M_IX86)
+#  define ASSEMBLY_INTEL_SYNTAX
+#  define ASSEMBLY_BLOCK __asm
+# endif
 
 # if (_MSC_VER <= 1200)
 #  pragma warning(disable : 4786) // truncation to 255 chars
@@ -365,7 +350,7 @@ namespace cat
 	/**
 	* Typename for 64 bits unsigned integer 
 	*/
-	typedef unsigned int long u64;
+	typedef unsigned long long u64;
 	/**
 	* Typename for 64 bits signed integer 
 	*/

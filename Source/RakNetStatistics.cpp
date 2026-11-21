@@ -20,8 +20,8 @@
 #include "GetTime.h"
 
 static unsigned lastSampleTime;
-static unsigned __int64 lastSentBits;
-static unsigned __int64 lastReceivedBits;
+static unsigned long long lastSentBits;
+static unsigned long long lastReceivedBits;
 
 void StatisticsToString(RakNetStatisticsStruct* s,char* buffer,int verbosityLevel) {
     if (!s) {

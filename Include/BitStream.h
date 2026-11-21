@@ -1016,10 +1016,8 @@ namespace RakNet
 		if (GetNumberOfUnreadBits() == 0)
 			return false;
 
-		if ( data[ readOffset >> 3 ] & ( 0x80 >> ( readOffset++ % 8 ) ) )   // Is it faster to just write it out here?
-			var = true;
-		else
-			var = false;
+		const int offset = readOffset++;
+		var = (data[offset >> 3] & (0x80 >> (offset & 7))) != 0;
 
 		return true;
 	}
