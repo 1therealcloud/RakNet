@@ -142,6 +142,11 @@ unsigned short DirectoryDeltaTransfer::DownloadFromSubdirectory(const char *subd
 
 	// Setup the transfer plugin to get the response to this download request
 	unsigned short setId = fileListTransfer->SetupReceive(transferCallback, true, host);
+	if (setId == (unsigned short)-1)
+	{
+		delete transferCallback;
+		return setId;
+	}
 
 	// Send to the host, telling it to process this request
 	RakNet::BitStream outBitstream;

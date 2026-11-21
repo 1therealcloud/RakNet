@@ -167,7 +167,8 @@ bool FileListTransfer::DecodeSetHeader(Packet *packet)
 	unsigned short setID;
 	RakNet::BitStream inBitStream(packet->data, packet->length, false);
 	inBitStream.IgnoreBits(8);
-	inBitStream.Read(setID);
+	if (!inBitStream.Read(setID))
+		return false;
 	FileListReceiver *fileListReceiver;
 	if (fileListReceivers.Has(setID)==false)
 	{
@@ -185,41 +186,43 @@ bool FileListTransfer::DecodeSetHeader(Packet *packet)
 		return false;
 	}
 
-#ifdef _DEBUG
-	assert(fileListReceiver->gotSetHeader==false);
-#endif
+	if (fileListReceiver->gotSetHeader || !inBitStream.Read(anythingToWrite))
+		return false;
 
-	inBitStream.Read(anythingToWrite);
-	if (anythingToWrite)
-	{
-		inBitStream.Read(fileListReceiver->isCompressed);
-		if (fileListReceiver->isCompressed)
-		{
-			for (i=0; i < 256; i++)
-				inBitStream.ReadCompressed(frequencyTable[i]);
-			fileListReceiver->tree.GenerateFromFrequencyTable(frequencyTable);
-			inBitStream.ReadCompressed(fileListReceiver->setCount);
-			inBitStream.ReadCompressed(fileListReceiver->setTotalFinalLength);
-			if (inBitStream.ReadCompressed(fileListReceiver->setTotalCompressedTransmissionLength))
-			{
-				fileListReceiver->gotSetHeader=true;
-				return true;
-			}
-		}
-		else
-		{
-			inBitStream.ReadCompressed(fileListReceiver->setCount);
-			inBitStream.ReadCompressed(fileListReceiver->setTotalFinalLength);
-			fileListReceiver->setTotalCompressedTransmissionLength=fileListReceiver->setTotalFinalLength;
-		}
-	}
-	else
+	if (!anythingToWrite)
 	{
 		fileListReceiver->downloadHandler->OnFile(0, 0, 0, 0, 0, setID, 0, 0, 0, 0);
 		return true;
 	}
 
-	return false;
+	bool isCompressed;
+	if (!inBitStream.Read(isCompressed))
+		return false;
+
+	if (isCompressed)
+	{
+		for (i=0; i < 256; i++)
+			if (!inBitStream.ReadCompressed(frequencyTable[i]))
+				return false;
+	}
+
+	unsigned setCount, totalLength, compressedLength;
+	if (!inBitStream.ReadCompressed(setCount) || !inBitStream.ReadCompressed(totalLength))
+		return false;
+	compressedLength = totalLength;
+	if (isCompressed)
+	{
+		if (!inBitStream.ReadCompressed(compressedLength))
+			return false;
+		fileListReceiver->tree.GenerateFromFrequencyTable(frequencyTable);
+	}
+
+	fileListReceiver->setCount = setCount;
+	fileListReceiver->setTotalFinalLength = totalLength;
+	fileListReceiver->setTotalCompressedTransmissionLength = compressedLength;
+	fileListReceiver->isCompressed = isCompressed;
+	fileListReceiver->gotSetHeader = true;
+	return true;
 }
 
 bool FileListTransfer::DecodeFile(Packet *packet, bool fullFile)
@@ -228,7 +231,7 @@ bool FileListTransfer::DecodeFile(Packet *packet, bool fullFile)
 	char fileName[512];
 	unsigned char context;
 	unsigned fileIndex, fileLength, compressedLength;
-	unsigned bitLength;
+	unsigned bitLength = 0;
 	unsigned len;
 	unsigned short setID;
 	RakNet::BitStream inBitStream(packet->data, packet->length, false);
@@ -239,13 +242,14 @@ bool FileListTransfer::DecodeFile(Packet *packet, bool fullFile)
 	unsigned int partLength;
 	if (fullFile==false)
 	{
-		inBitStream.Read(partCount);
-		inBitStream.Read(partTotal);
-		inBitStream.Read(partLength);
+		if (!inBitStream.Read(partCount) || !inBitStream.Read(partTotal) || !inBitStream.Read(partLength))
+			return false;
 		inBitStream.IgnoreBits(8);
 	}
-	inBitStream.Read(context);
-	inBitStream.Read(setID);
+	if (!inBitStream.Read(context))
+		return false;
+	if (!inBitStream.Read(setID))
+		return false;
 	FileListReceiver *fileListReceiver;
 	if (fileListReceivers.Has(setID)==false)
 	{
@@ -263,46 +267,53 @@ bool FileListTransfer::DecodeFile(Packet *packet, bool fullFile)
 		return false;
 	}
 
-#ifdef _DEBUG
-	assert(fileListReceiver->gotSetHeader==true);
-#endif
-	
-	inBitStream.ReadCompressed(fileIndex);
-	inBitStream.ReadCompressed(fileLength);
+	if (!fileListReceiver->gotSetHeader ||
+		!inBitStream.ReadCompressed(fileIndex) ||
+		!inBitStream.ReadCompressed(fileLength) ||
+		fileIndex >= fileListReceiver->setCount)
+		return false;
+
+	compressedLength = fileLength;
 	if (fileListReceiver->isCompressed)
 	{
-		inBitStream.ReadCompressed(bitLength);
-		compressedLength=BITS_TO_BYTES(bitLength);
+		if (!inBitStream.ReadCompressed(bitLength))
+			return false;
+		compressedLength = bitLength / 8 + (bitLength % 8 != 0);
 	}
 
-	if (stringCompressor->DecodeString(fileName, 512, &inBitStream)==false)
-	{
-#ifdef _DEBUG
-		assert(0);
-#endif
+	if (!stringCompressor->DecodeString(fileName, sizeof(fileName), &inBitStream))
 		return false;
-	}
 
 	if (fullFile)
 	{
-	decompressedFileData = new unsigned char [fileLength];
-
-	if (fileListReceiver->isCompressed)
-	{
-		len=fileListReceiver->tree.DecodeArray(&inBitStream, bitLength, fileLength, decompressedFileData);
-		if (len!=fileLength)
+		const int unreadBits = inBitStream.GetNumberOfUnreadBits();
+		if (unreadBits < 0)
+			return false;
+		if (fileListReceiver->isCompressed)
 		{
-#ifdef _DEBUG
-			assert(0);
-#endif
+			// Each decoded byte consumes at least one bit.
+			if (bitLength > (unsigned)unreadBits || fileLength > bitLength)
+				return false;
+		}
+		else if (fileLength > (unsigned)unreadBits / 8)
+			return false;
+
+		decompressedFileData = new unsigned char[fileLength];
+		if (fileListReceiver->isCompressed)
+		{
+			len = fileListReceiver->tree.DecodeArray(&inBitStream, bitLength, fileLength, decompressedFileData);
+			if (len != fileLength)
+			{
+				delete [] decompressedFileData;
+				return false;
+			}
+		}
+		else if (fileLength && !inBitStream.Read((char*)decompressedFileData, fileLength))
+		{
 			delete [] decompressedFileData;
 			return false;
 		}
 	}
-	else
-		inBitStream.Read((char*)decompressedFileData, fileLength);
-	}
-	
 
 	// User callback for this file.
 	if (fullFile)
@@ -330,6 +341,8 @@ bool FileListTransfer::DecodeFile(Packet *packet, bool fullFile)
 #endif
 PluginReceiveResult FileListTransfer::OnReceive(RakPeerInterface *peer, Packet *packet)
 {
+	if (!packet || !packet->data || packet->length == 0)
+		return RR_CONTINUE_PROCESSING;
 	switch (packet->data[0]) 
 	{
 	case ID_CONNECTION_LOST:

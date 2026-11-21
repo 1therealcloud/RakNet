@@ -3,6 +3,8 @@
 //#include <malloc.h> // PS3 doesn't have this
 #include <stdlib.h> // realloc
 #include <stdio.h>
+#include <limits.h>
+#include <new>
 
 using namespace DataStructures;
 
@@ -24,11 +26,19 @@ void ByteQueue::WriteBytes(const char *in, unsigned length)
 	if (lengthAllocated==0 || length > lengthAllocated-bytesWritten-1)
 	{
 		unsigned oldLengthAllocated=lengthAllocated;
+		if (length > UINT_MAX / 2)
+			throw std::bad_alloc();
 		unsigned newAmountToAllocate=length*2;
 		if (newAmountToAllocate<256)
 			newAmountToAllocate=256;
-		lengthAllocated=lengthAllocated + newAmountToAllocate;
-		data=(char*)realloc(data, lengthAllocated);
+		if (newAmountToAllocate > UINT_MAX - lengthAllocated)
+			throw std::bad_alloc();
+		const unsigned newLength = lengthAllocated + newAmountToAllocate;
+		char *newData = (char*)realloc(data, newLength);
+		if (!newData)
+			throw std::bad_alloc();
+		data = newData;
+		lengthAllocated = newLength;
 		if (writeOffset < readOffset)
 		{
 			if (writeOffset <= newAmountToAllocate)
@@ -86,7 +96,7 @@ unsigned ByteQueue::GetBytesWritten(void) const
 	if (writeOffset>=readOffset)
 		return writeOffset-readOffset;
 	else
-		return (writeOffset-1)+(lengthAllocated-readOffset);
+		return writeOffset+(lengthAllocated-readOffset);
 }
 void ByteQueue::IncrementReadOffset(unsigned length)
 {
