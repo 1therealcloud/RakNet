@@ -10,7 +10,7 @@ namespace DataStructures
     template <class range_type>
     struct RangeNode
     {
-        RangeNode() {}
+        RangeNode() : minIndex(), maxIndex() {}
         ~RangeNode() {}
         RangeNode(range_type min, range_type max) {minIndex=min; maxIndex=max;}
         range_type minIndex;
@@ -23,9 +23,9 @@ namespace DataStructures
     {
         if (a<b.minIndex)
             return -1;
-        if (a==b.minIndex)
-            return 0;
-        return 1;
+        if (a>b.maxIndex)
+            return 1;
+        return 0;
     }
 
 	template <class range_type>
@@ -141,6 +141,8 @@ namespace DataStructures
 
 		bool objectExists;
 		unsigned insertionIndex=ranges.GetIndexFromKey(index, &objectExists);
+		if (objectExists)
+			return;
 		if (insertionIndex==ranges.Size())
 		{
 			if (index == ranges[insertionIndex-1].maxIndex+1)
@@ -171,11 +173,6 @@ namespace DataStructures
 				ranges.RemoveAtIndex(insertionIndex);
 			}
 
-			return;
-		}
-		else if (index >= ranges[insertionIndex].minIndex && index <= ranges[insertionIndex].maxIndex)
-		{
-			// Already exists
 			return;
 		}
 		else if (index == ranges[insertionIndex].maxIndex+1)

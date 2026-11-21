@@ -255,7 +255,14 @@ namespace DataStructures
 		if ( ( &original_copy ) == this )
 			return false;
 
+		// Clear may retain small allocations for reuse.
 		Clear();
+		if (allocation_size != 0)
+		{
+			delete [] array;
+			allocation_size = 0;
+		}
+		array = 0;
 
 		// Allocate memory for copy
 		if ( original_copy.Size() == 0 )

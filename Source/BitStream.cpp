@@ -212,14 +212,22 @@ void BitStream::Write( const char* input, const int numberOfBytes )
 }
 void BitStream::Write( BitStream *bitStream)
 {
-	Write(bitStream, bitStream->GetNumberOfBitsUsed());
+	if (bitStream)
+		Write(bitStream, bitStream->GetNumberOfUnreadBits());
 }
 void BitStream::Write( BitStream *bitStream, int numberOfBits )
 {
+	if (!bitStream || numberOfBits <= 0)
+		return;
+	const int unreadBits = bitStream->GetNumberOfUnreadBits();
+	if (numberOfBits > unreadBits)
+		numberOfBits = unreadBits;
+	if (numberOfBits == 0)
+		return;
 	AddBitsAndReallocate( numberOfBits );
 	int numberOfBitsMod8;
 
-	while (numberOfBits-->0 && bitStream->readOffset + 1 <= bitStream->numberOfBitsUsed)
+	while (numberOfBits-->0)
 	{
 		numberOfBitsMod8 = numberOfBitsUsed & 7;
 		if ( numberOfBitsMod8 == 0 )
@@ -251,12 +259,14 @@ void BitStream::Write( BitStream *bitStream, int numberOfBits )
 // Read an array or casted stream
 bool BitStream::Read( char* output, const int numberOfBytes )
 {
+	if (numberOfBytes < 0 || numberOfBytes > GetNumberOfUnreadBits() / 8)
+		return false;
+	if (numberOfBytes == 0)
+		return true;
+
 	// Optimization:
 	if ((readOffset & 7) == 0)
 	{
-		if ( readOffset + ( numberOfBytes << 3 ) > numberOfBitsUsed )
-			return false;
-
 		// Write the data
 		memcpy( output, data + ( readOffset >> 3 ), numberOfBytes );
 
@@ -314,6 +324,8 @@ void BitStream::Write1( void )
 // Returns true if the next data read is a 1, false if it is a 0
 bool BitStream::ReadBit( void )
 {
+	if (GetNumberOfUnreadBits() == 0)
+		return false;
 	return ( bool ) ( data[ readOffset >> 3 ] & ( 0x80 >> ( readOffset++ & 7 ) ) );
 }
 
@@ -343,11 +355,12 @@ bool BitStream::ReadAlignedBytes( unsigned char* output, const int numberOfBytes
 	if ( numberOfBytesToRead <= 0 )
 		return false;
 		
-	// Byte align
-	AlignReadToByteBoundary();
-
-	if ( readOffset + ( numberOfBytesToRead << 3 ) > numberOfBitsUsed )
+	const int alignmentBits = (8 - (readOffset & 7)) & 7;
+	const int unreadBits = GetNumberOfUnreadBits();
+	if (unreadBits < alignmentBits || numberOfBytesToRead > (unreadBits - alignmentBits) / 8)
 		return false;
+
+	readOffset += alignmentBits;
 
 	// Write the data
 	memcpy( output, data + ( readOffset >> 3 ), numberOfBytesToRead );
@@ -497,7 +510,7 @@ bool BitStream::ReadBits( unsigned char* output, int numberOfBitsToRead, const b
 	if (numberOfBitsToRead<=0)
 	  return false;
 	
-	if ( readOffset + numberOfBitsToRead > numberOfBitsUsed )
+	if (numberOfBitsToRead > GetNumberOfUnreadBits())
 		return false;
 		
 	int readOffsetMod8;
@@ -590,7 +603,7 @@ bool BitStream::ReadCompressed( unsigned char* output,
 	// All but the first bytes are byteMatch.  If the upper half of the last byte is a 0 (positive) or 16 (negative) then what we read will be a 1 and the remaining 4 bits.
 	// Otherwise we read a 0 and the 8 bytes
 	//assert(readOffset+1 <=numberOfBitsUsed); // If this assert is hit the stream wasn't long enough to read from
-	if ( readOffset + 1 > numberOfBitsUsed )
+	if (GetNumberOfUnreadBits() == 0)
 		return false;
 		
 	bool b;
@@ -758,7 +771,7 @@ void BitStream::SetReadOffset( int newReadOffset )
 // Returns the number of bits left in the stream that haven't been read
 int BitStream::GetNumberOfUnreadBits( void ) const
 {
-	return numberOfBitsUsed - readOffset;
+	return readOffset >= 0 && readOffset < numberOfBitsUsed ? numberOfBitsUsed - readOffset : 0;
 }
 // Exposes the internal data
 unsigned char* BitStream::GetData( void ) const
