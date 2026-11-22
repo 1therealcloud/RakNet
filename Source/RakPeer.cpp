@@ -180,6 +180,11 @@ unsigned short GetServerCookieChallenge()
     return static_cast<unsigned short>(3U ^ serverCookieSeed);
 }
 
+unsigned int GetServerHandshakeSeed()
+{
+    return serverHandshakeSeed;
+}
+
 static const int MAX_OFFLINE_DATA_LENGTH=400; // I set this because I limit ID_CONNECTION_REQUEST to 512 bytes, and the password is appended to that packet.
 
 //#define _DO_PRINTF
